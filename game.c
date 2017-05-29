@@ -33,6 +33,11 @@ struct ids {
     uint64_t color_comp;
 };
 
+struct render_ctx {
+    struct ids *ids;
+    SDL_Window *win;
+};
+
 static void phys_tick(struct scene *scene, uint64_t eid, void *func_data)
 {
     struct ids *ids = func_data;
@@ -47,9 +52,9 @@ static void phys_tick(struct scene *scene, uint64_t eid, void *func_data)
 
 static void render_tick(struct scene *scene, uint64_t eid, void *func_data)
 {
-    struct ids *ids = func_data;
-    struct phys_comp *phys = scene_get_comp(scene, ids->phys_comp, eid);
-    struct color_comp *color = scene_get_comp(scene, ids->color_comp, eid);
+    struct render_ctx *ctx = func_data;
+    struct phys_comp *phys = scene_get_comp(scene, ctx->ids->phys_comp, eid);
+    struct color_comp *color = scene_get_comp(scene, ctx->ids->color_comp, eid);
 
     /* XXX */
     printf("\n%s(%lu):\ncolor.r: %f, color.g: %f, color.b: %f\n", __func__, eid,
@@ -83,8 +88,10 @@ int main(void)
 {
     struct scene scene;
     struct ids ids;
-    SDL_Window *win;
+    struct render_ctx render_ctx;
     int runnig = 1;
+    SDL_Window *win;
+    SDL_Surface *surf;
     SDL_Event event;
 
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -93,6 +100,10 @@ int main(void)
     win = SDL_CreateWindow("title", SDL_WINDOWPOS_UNDEFINED,
                            SDL_WINDOWPOS_UNDEFINED, 640, 480,
                            SDL_WINDOW_OPENGL);
+    surf = SDL_GetWindowSurface(win);
+
+    render_ctx.ids = &ids;
+    render_ctx.win = win;
 
     scene_init(&scene);
 
@@ -102,7 +113,7 @@ int main(void)
     scene_register_comp_func(&scene, 1<<ids.phys_comp, phys_tick, &ids);
 
     scene_register_comp_func(&scene, (1<<ids.phys_comp) | (1<<ids.color_comp),
-                             render_tick, &ids);
+                             render_tick, &render_ctx);
 
     create_particle(&scene, &ids);
     create_particle(&scene, &ids);
@@ -114,7 +125,13 @@ int main(void)
                 runnig = 0;
         }
 
+        SDL_FillRect(surf, NULL, SDL_MapRGB(surf->format, 0x22, 0x22, 0x22));
+
         scene_tick(&scene);
+
+        SDL_UpdateWindowSurface(win);
+
+        SDL_Delay(2);
     }
 
     scene_cleanup(&scene);
