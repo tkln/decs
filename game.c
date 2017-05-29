@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <SDL2/SDL.h>
+
 #include "decs.h"
 
 struct vec3 {
@@ -81,6 +83,16 @@ int main(void)
 {
     static struct scene scene;
     static struct ids ids;
+    SDL_Window *win;
+    int runnig = 1;
+    SDL_Event event;
+
+    SDL_Init(SDL_INIT_EVERYTHING);
+
+    /* TODO error checks */
+    win = SDL_CreateWindow("title", SDL_WINDOWPOS_UNDEFINED,
+                           SDL_WINDOWPOS_UNDEFINED, 640, 480,
+                           SDL_WINDOW_OPENGL);
 
     ids.phys_comp = scene_register_comp(&scene, sizeof(struct phys_comp)); 
     ids.color_comp = scene_register_comp(&scene, sizeof(struct color_comp));
@@ -94,9 +106,19 @@ int main(void)
     create_particle(&scene, &ids);
     create_particle(&scene, &ids);
 
-    scene_tick(&scene);
+    while (runnig) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT)
+                runnig = 0;
+        }
+
+        scene_tick(&scene);
+    }
 
     scene_cleanup(&scene);
+
+    SDL_DestroyWindow(win);
+    SDL_Quit();
 
     return 0;
 }

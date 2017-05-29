@@ -12,6 +12,7 @@ void scene_init(struct scene *scene)
 /* TODO:
  * - Entity removal
  * - Support for better allocation schemes
+ * - Separate scene tick into multiple buckets
  */
 
 uint64_t scene_register_comp(struct scene *s, size_t size)
