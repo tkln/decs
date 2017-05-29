@@ -81,8 +81,8 @@ void create_particle(struct scene *scene, struct ids *ids)
 
 int main(void)
 {
-    static struct scene scene;
-    static struct ids ids;
+    struct scene scene;
+    struct ids ids;
     SDL_Window *win;
     int runnig = 1;
     SDL_Event event;
@@ -93,6 +93,8 @@ int main(void)
     win = SDL_CreateWindow("title", SDL_WINDOWPOS_UNDEFINED,
                            SDL_WINDOWPOS_UNDEFINED, 640, 480,
                            SDL_WINDOW_OPENGL);
+
+    scene_init(&scene);
 
     ids.phys_comp = scene_register_comp(&scene, sizeof(struct phys_comp)); 
     ids.color_comp = scene_register_comp(&scene, sizeof(struct color_comp));
