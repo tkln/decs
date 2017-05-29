@@ -17,15 +17,15 @@ void scene_init(struct scene *scene)
 
 uint64_t scene_register_comp(struct scene *s, size_t size)
 {
-    struct component *info;
+    struct component *comp;
 
     ++s->n_comps;
     s->comps = realloc(s->comps, s->n_comps * sizeof(s->comps[0]));
 
-    info = &s->comps[s->n_comps - 1];
+    comp = &s->comps[s->n_comps - 1];
 
-    info->size  = size;
-    info->data  = NULL;
+    comp->size  = size;
+    comp->data  = NULL;
 
     return s->n_comps - 1;
 }
@@ -36,8 +36,9 @@ void scene_register_comp_func(struct scene *s, comp_bits_type comps,
     struct comp_func *comp_func;
     size_t i;
 
-    s->comp_funcs = realloc(s->comp_funcs, (++s->n_comp_funcs) *
-                            sizeof(struct comp_func));
+    ++s->n_comp_funcs;
+    s->comp_funcs = realloc(s->comp_funcs,
+                            s->n_comp_funcs * sizeof(struct comp_func));
     comp_func = &s->comp_funcs[s->n_comp_funcs - 1];
 
     comp_func->func         = func;
@@ -51,7 +52,6 @@ uint64_t scene_alloc_entity(struct scene *s, comp_bits_type comp_ids)
     struct component *comp;
 
     ++s->n_entities;
-
     s->entity_comp_map = realloc(s->entity_comp_map,
                                   s->n_entities * sizeof(*s->entity_comp_map));
     s->entity_comp_map[s->n_entities - 1] = comp_ids;
@@ -66,17 +66,17 @@ uint64_t scene_alloc_entity(struct scene *s, comp_bits_type comp_ids)
 
 void scene_tick(struct scene *s)
 {
-    int fid, eid; 
+    int fidx, eid;
     comp_bits_type comps;
     comp_func_type func;
     void *data;
 
-    for (fid = 0; fid < s->n_comp_funcs; ++fid) {
-        comps = s->comp_funcs[fid].comps;
-        func = s->comp_funcs[fid].func;
-        data = s->comp_funcs[fid].func_data;
+    for (fidx = 0; fidx < s->n_comp_funcs; ++fidx) {
+        comps = s->comp_funcs[fidx].comps;
+        func = s->comp_funcs[fidx].func;
+        data = s->comp_funcs[fidx].func_data;
         for (eid = 0; eid < s->n_entities; ++eid)
-            if ((comps & s->entity_comp_map[fid]) == comps)
+            if ((comps & s->entity_comp_map[fidx]) == comps)
                 func(s, eid, data);
     }
 }
