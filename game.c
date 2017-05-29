@@ -3,8 +3,6 @@
 
 #include "decs.h"
 
-#define ARR_LEN(a) (sizeof(a) / sizeof(a[0]))
-
 struct vec3 {
     union {
         float e[3];
