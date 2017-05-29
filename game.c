@@ -95,9 +95,9 @@ void create_particle(struct scene *scene, struct ids *ids)
     phys->pos.x = eid * 0.01f;
     phys->pos.y = eid * 0.02f;
     phys->pos.z = eid * 0.03f;
-    phys->vel.x = sin(eid * 0.1) * 0.0004f;
-    phys->vel.y = sin(eid * 0.1) * 0.0005f;
-    phys->vel.z = sin(eid * 0.1) * 0.0006f;
+    phys->vel.x = sin(eid * 0.1) * 0.004f;
+    phys->vel.y = sin(eid * 0.1) * 0.005f;
+    phys->vel.z = sin(eid * 0.1) * 0.006f;
     color->r = eid * 0.1 * 2;
     color->g = eid * 0.3 * 2;
     color->b = eid * 0.2 * 2;
@@ -152,7 +152,7 @@ int main(void)
 
         SDL_RenderPresent(rend);
 
-        SDL_Delay(2);
+        SDL_Delay(16);
     }
 
     scene_cleanup(&scene);
