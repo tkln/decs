@@ -76,7 +76,7 @@ void scene_tick(struct scene *s)
         func = s->comp_funcs[fid].func;
         data = s->comp_funcs[fid].func_data;
         for (eid = 0; eid < s->n_entities; ++eid)
-            if (comps & s->entity_comp_map[fid])
+            if ((comps & s->entity_comp_map[fid]) == comps)
                 func(s, eid, data);
     }
 }
