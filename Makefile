@@ -1,5 +1,9 @@
+CFLAGS+=-std=c99 -g
+OBJS=decs.o game.o
+
 all: game
 
-decs.o: decs.c
-game.o: game.c
-game: decs.o game.o
+game: $(OBJS)
+
+clean:
+	rm -f $(OBJS) game
