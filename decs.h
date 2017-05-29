@@ -27,6 +27,8 @@ struct scene {
     size_t n_comp_funcs;
 };
 
+void scene_init(struct scene *scene);
+
 uint64_t scene_register_comp(struct scene *scene, size_t size);
 
 void scene_register_comp_func(struct scene *scene, comp_bits_type comps,
@@ -42,4 +44,5 @@ static inline void *scene_get_comp(struct scene *s, uint64_t cid, uint64_t eid)
 
 void scene_tick(struct scene *scene);
 
+void scene_cleanup(struct scene *scene);
 #endif

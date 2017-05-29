@@ -4,10 +4,20 @@
 
 #include "decs.h"
 
+void scene_init(struct scene *scene)
+{
+    memset(scene, 0, sizeof(*scene));
+}
+
+/* TODO:
+ * - Entity removal
+ * - Support for better allocation schemes
+ */
+
 uint64_t scene_register_comp(struct scene *s, size_t size)
 {
     struct component *info;
-    /* TODO free */
+
     ++s->n_comps;
     s->comps = realloc(s->comps, s->n_comps * sizeof(s->comps[0]));
 
@@ -25,7 +35,6 @@ void scene_register_comp_func(struct scene *s, comp_bits_type comps,
     struct comp_func *comp_func;
     size_t i;
 
-    /* TODO free */
     s->comp_funcs = realloc(s->comp_funcs, (++s->n_comp_funcs) *
                             sizeof(struct comp_func));
     comp_func = &s->comp_funcs[s->n_comp_funcs - 1];
@@ -69,4 +78,16 @@ void scene_tick(struct scene *s)
             if (comps & s->entity_comp_map[fid])
                 func(s, eid, data);
     }
+}
+
+void scene_cleanup(struct scene *s)
+{
+    int cid;
+
+    for (cid = 0; cid < s->n_comps; ++cid)
+        free(s->comps[cid].data);
+
+    free(s->comp_funcs);
+    free(s->entity_comp_map);
+    free(s->comps);
 }

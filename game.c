@@ -98,5 +98,7 @@ int main(void)
 
     scene_tick(&scene);
 
+    scene_cleanup(&scene);
+
     return 0;
 }
