@@ -4,18 +4,18 @@
 
 #include "decs.h"
 
-void scene_init(struct scene *scene)
+void decs_init(struct decs *decs)
 {
-    memset(scene, 0, sizeof(*scene));
+    memset(decs, 0, sizeof(*decs));
 }
 
 /* TODO:
  * - Entity removal
  * - Support for better allocation schemes
- * - Separate scene tick into multiple buckets
+ * - Separate decs tick into multiple buckets
  */
 
-uint64_t scene_register_comp(struct scene *s, size_t size)
+uint64_t decs_register_comp(struct decs *s, size_t size)
 {
     struct component *comp;
 
@@ -30,8 +30,8 @@ uint64_t scene_register_comp(struct scene *s, size_t size)
     return s->n_comps - 1;
 }
 
-void scene_register_comp_func(struct scene *s, comp_bits_type comps,
-                              comp_func_type func, void *func_data)
+void decs_register_comp_func(struct decs *s, comp_bits_type comps,
+                             comp_func_type func, void *func_data)
 {
     struct comp_func *comp_func;
     size_t i;
@@ -46,7 +46,7 @@ void scene_register_comp_func(struct scene *s, comp_bits_type comps,
     comp_func->comps        = comps;
 }
 
-uint64_t scene_alloc_entity(struct scene *s, comp_bits_type comp_ids)
+uint64_t decs_alloc_entity(struct decs *s, comp_bits_type comp_ids)
 {
     int cid, i;
     struct component *comp;
@@ -64,7 +64,7 @@ uint64_t scene_alloc_entity(struct scene *s, comp_bits_type comp_ids)
     return s->n_entities - 1;
 }
 
-void scene_tick(struct scene *s)
+void decs_tick(struct decs *s)
 {
     int fidx, eid;
     comp_bits_type comps;
@@ -81,7 +81,7 @@ void scene_tick(struct scene *s)
     }
 }
 
-void scene_cleanup(struct scene *s)
+void decs_cleanup(struct decs *s)
 {
     int cid;
 

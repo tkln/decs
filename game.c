@@ -45,10 +45,10 @@ struct phys_ctx {
     struct vec3 force_point;
 };
 
-static void phys_tick(struct scene *scene, uint64_t eid, void *func_data)
+static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
     struct phys_ctx *ctx = func_data;
-    struct phys_comp *phys = scene_get_comp(scene, ctx->ids->phys_comp, eid);
+    struct phys_comp *phys = decs_get_comp(decs, ctx->ids->phys_comp, eid);
     struct vec3 force;
 
     float dx = -(phys->pos.x - ctx->force_point.x);
@@ -87,11 +87,11 @@ static void phys_tick(struct scene *scene, uint64_t eid, void *func_data)
     phys->vel.y += force.y;
 }
 
-static void render_tick(struct scene *scene, uint64_t eid, void *func_data)
+static void render_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
     struct render_ctx *ctx = func_data;
-    struct phys_comp *phys = scene_get_comp(scene, ctx->ids->phys_comp, eid);
-    struct color_comp *color = scene_get_comp(scene, ctx->ids->color_comp, eid);
+    struct phys_comp *phys = decs_get_comp(decs, ctx->ids->phys_comp, eid);
+    struct color_comp *color = decs_get_comp(decs, ctx->ids->color_comp, eid);
 
 #if 0
     /* XXX */
@@ -109,16 +109,16 @@ static void render_tick(struct scene *scene, uint64_t eid, void *func_data)
 
 }
 
-void create_particle(struct scene *scene, struct ids *ids)
+void create_particle(struct decs *decs, struct ids *ids)
 {
     struct phys_comp *phys;
     struct color_comp *color;
     uint64_t eid;
 
-    eid = scene_alloc_entity(scene, (1<<ids->phys_comp) | (1<<ids->color_comp));
+    eid = decs_alloc_entity(decs, (1<<ids->phys_comp) | (1<<ids->color_comp));
 
-    phys = scene_get_comp(scene, ids->phys_comp, eid);
-    color = scene_get_comp(scene, ids->color_comp, eid);
+    phys = decs_get_comp(decs, ids->phys_comp, eid);
+    color = decs_get_comp(decs, ids->color_comp, eid);
 
     /* XXX */
     phys->pos.x = eid * 0.01f;
@@ -134,7 +134,7 @@ void create_particle(struct scene *scene, struct ids *ids)
 
 int main(void)
 {
-    struct scene scene;
+    struct decs decs;
     struct ids ids;
     struct render_ctx render_ctx;
     struct phys_ctx phys_ctx;
@@ -159,18 +159,18 @@ int main(void)
 
     phys_ctx.ids = &ids;
 
-    scene_init(&scene);
+    decs_init(&decs);
 
-    ids.phys_comp = scene_register_comp(&scene, sizeof(struct phys_comp)); 
-    ids.color_comp = scene_register_comp(&scene, sizeof(struct color_comp));
+    ids.phys_comp = decs_register_comp(&decs, sizeof(struct phys_comp));
+    ids.color_comp = decs_register_comp(&decs, sizeof(struct color_comp));
 
-    scene_register_comp_func(&scene, 1<<ids.phys_comp, phys_tick, &phys_ctx);
+    decs_register_comp_func(&decs, 1<<ids.phys_comp, phys_tick, &phys_ctx);
 
-    scene_register_comp_func(&scene, (1<<ids.phys_comp) | (1<<ids.color_comp),
+    decs_register_comp_func(&decs, (1<<ids.phys_comp) | (1<<ids.color_comp),
                              render_tick, &render_ctx);
 
     for (i = 0; i < 2048; ++i)
-        create_particle(&scene, &ids);
+        create_particle(&decs, &ids);
 
     while (runnig) {
         while (SDL_PollEvent(&event)) {
@@ -178,7 +178,7 @@ int main(void)
                 runnig = 0;
         }
 
-        create_particle(&scene, &ids);
+        create_particle(&decs, &ids);
 
         SDL_GetMouseState(&mx, &my);
         phys_ctx.force_point.x = mx / 640.0f;
@@ -187,14 +187,14 @@ int main(void)
         SDL_SetRenderDrawColor(rend, 0x22, 0x22, 0x22, 0xff);
         SDL_RenderClear(rend);
 
-        scene_tick(&scene);
+        decs_tick(&decs);
 
         SDL_RenderPresent(rend);
 
         SDL_Delay(16);
     }
 
-    scene_cleanup(&scene);
+    decs_cleanup(&decs);
 
     SDL_DestroyWindow(win);
     SDL_Quit();

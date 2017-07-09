@@ -3,9 +3,9 @@
 #ifndef DECS_H
 #define DECS_H
 
-struct scene;
+struct decs;
 typedef uint64_t comp_bits_type;
-typedef void (*comp_func_type)(struct scene *scene, uint64_t eid, void *data);
+typedef void (*comp_func_type)(struct decs *decs, uint64_t eid, void *data);
 
 struct component {
     size_t size;
@@ -18,7 +18,7 @@ struct comp_func {
     comp_bits_type comps;
 };
 
-struct scene {
+struct decs {
     struct component *comps;
     size_t n_comps;
     comp_bits_type *entity_comp_map;
@@ -27,22 +27,22 @@ struct scene {
     size_t n_comp_funcs;
 };
 
-void scene_init(struct scene *scene);
+void decs_init(struct decs *decs);
 
-uint64_t scene_register_comp(struct scene *scene, size_t size);
+uint64_t decs_register_comp(struct decs *decs, size_t size);
 
-void scene_register_comp_func(struct scene *scene, comp_bits_type comps,
-                              comp_func_type func, void *func_data);
+void decs_register_comp_func(struct decs *decs, comp_bits_type comps,
+                             comp_func_type func, void *func_data);
 
-uint64_t scene_alloc_entity(struct scene *scene, comp_bits_type comp_ids);
+uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids);
 
-static inline void *scene_get_comp(struct scene *s, uint64_t cid, uint64_t eid)
+static inline void *decs_get_comp(struct decs *s, uint64_t cid, uint64_t eid)
 {
     struct component *comp = s->comps + cid;
     return comp->data + eid * comp->size;
 }
 
-void scene_tick(struct scene *scene);
+void decs_tick(struct decs *decs);
 
-void scene_cleanup(struct scene *scene);
+void decs_cleanup(struct decs *decs);
 #endif
