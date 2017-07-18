@@ -64,46 +64,51 @@ struct phys_ctx {
     struct vec3 force_point;
 };
 
+static struct vec3 phys_drag_force(const struct phys_comp *phys)
+{
+    const float fluid_density = 1.2f; // Air
+    const float area = 10.10f;
+    const float drag_coef = 0.47f; // Sphere
+    const float total_drag_coef = -0.5f * fluid_density * drag_coef * area;
+    const struct vec3 vel2 = vec3_pow2(phys->vel);
+    struct vec3 drag_force = vec3_muls(vel2, total_drag_coef);
+
+    return drag_force;
+}
+
+static void phys_euler_tick(struct phys_comp *phys, struct vec3 force, float dt)
+{
+    struct vec3 acc = vec3_muls(force, 1.0f / phys->mass);
+
+    struct vec3 d_vel = vec3_muls(acc, dt);
+    struct vec3 d_pos = vec3_muls(phys->vel, dt);
+
+    phys->vel = vec3_add(phys->vel, d_vel);
+    phys->pos = vec3_add(phys->pos, d_pos);
+}
+
 static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
     struct phys_ctx *ctx = func_data;
     struct phys_comp *phys = decs_get_comp(decs, ctx->ids->phys_comp, eid);
-    struct vec3 force;
 
-    float dx = -(phys->pos.x - ctx->force_point.x);
-    float dy = -(phys->pos.y - ctx->force_point.y);
+    float dt = 1.0f / 60.0f;
 
-    force.x = (0.0001f / (sqrtf(dx * dx) + 0.75));
-    force.y = (0.0001f / (sqrtf(dy * dy) + 0.75));
-    if (dx < 0)
-        force.x *= -1.0f;
-    if (dy < 0)
-        force.y *= -1.0f;
+    struct vec3 force_field = { phys->pos.x - ctx->force_point.x,
+                                phys->pos.y - ctx->force_point.y,
+                                0.0f };
+    struct vec3 drag_force = phys_drag_force(phys);
+    struct vec3 total_force = vec3_add(force_field, drag_force);
 
-#if 0
-    /* XXX */
-    printf("\n%s(%lu):\nphys.pos.x: %f, phys.pos.y: %f, phys.pos.z: %f,\n"
-           "phys.vel.x: %f, phys.vel.y: %f, phys.vel.z: %f\n", __func__, eid,
-           phys->pos.x, phys->pos.y, phys->pos.z,
-           phys->vel.x, phys->vel.y, phys->vel.z);
-#endif
+    phys_euler_tick(phys, total_force, dt);
 
-    phys->pos.x += phys->vel.x;
-    phys->pos.y += phys->vel.y;
-
+    /* Wraparound */
     phys->pos.x = fmod(phys->pos.x, 1.0f);
     phys->pos.y = fmod(phys->pos.y, 1.0f);
     if (phys->pos.x < 0.0f)
         phys->pos.x += 1.0f;
     if (phys->pos.y < 0.0f)
         phys->pos.y += 1.0f;
-
-    /* Friction */
-    phys->vel.x *= 0.99f;
-    phys->vel.y *= 0.99f;
-
-    phys->vel.x += force.x;
-    phys->vel.y += force.y;
 }
 
 static void render_tick(struct decs *decs, uint64_t eid, void *func_data)
