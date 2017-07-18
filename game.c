@@ -36,6 +36,7 @@ static inline struct vec3 vec3_pow2(const struct vec3 a)
 struct phys_comp  {
     struct vec3 pos;
     struct vec3 vel;
+    float mass;
 };
 
 struct color_comp {
@@ -145,6 +146,7 @@ void create_particle(struct decs *decs, struct ids *ids)
     phys->vel.x = sin(eid * 0.1) * 0.004f;
     phys->vel.y = sin(eid * 0.1) * 0.005f;
     phys->vel.z = sin(eid * 0.1) * 0.006f;
+    phys->mass = 1.0f;
     color->r = eid * 0.1 * 2;
     color->g = eid * 0.3 * 2;
     color->b = eid * 0.2 * 2;
