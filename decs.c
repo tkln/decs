@@ -30,19 +30,26 @@ uint64_t decs_register_comp(struct decs *s, size_t size)
     return s->n_comps - 1;
 }
 
-void decs_register_system(struct decs *s, comp_bits_type comps,
-                          system_func func, void *func_data)
+uint64_t decs_register_system(struct decs *decs, comp_bits_type comps,
+                              system_func func, void *func_data,
+                              uint64_t *deps, size_t n_deps)
 {
     struct system *system;
     size_t i;
 
-    ++s->n_systems;
-    s->systems = realloc(s->systems, s->n_systems * sizeof(struct system));
-    system = &s->systems[s->n_systems - 1];
+    ++decs->n_systems;
+    decs->systems = realloc(decs->systems, decs->n_systems *
+                                           sizeof(struct system));
+    system = &decs->systems[decs->n_systems - 1];
 
-    system->func         = func;
-    system->func_data    = func_data;
-    system->comps        = comps;
+    system->func        = func;
+    system->func_data   = func_data;
+    system->comps       = comps;
+    system->n_deps      = n_deps;
+    system->deps        = malloc(sizeof(*deps) * n_deps);
+    memcpy(system->deps, deps, sizeof(*deps) * n_deps);
+
+    return decs->n_systems - 1;
 }
 
 uint64_t decs_alloc_entity(struct decs *s, comp_bits_type comp_ids)
@@ -63,31 +70,54 @@ uint64_t decs_alloc_entity(struct decs *s, comp_bits_type comp_ids)
     return s->n_entities - 1;
 }
 
-void decs_tick(struct decs *s)
+static void decs_system_tick(struct decs *decs, struct system *sys)
 {
-    int fidx, eid;
-    comp_bits_type comps;
-    system_func func;
-    void *data;
+    comp_bits_type comps = sys->comps;
+    system_func func = sys->func;
+    void *data = sys->func_data;
+    uint64_t eid, did, i;
 
-    for (fidx = 0; fidx < s->n_systems; ++fidx) {
-        comps = s->systems[fidx].comps;
-        func = s->systems[fidx].func;
-        data = s->systems[fidx].func_data;
-        for (eid = 0; eid < s->n_entities; ++eid)
-            if ((comps & s->entity_comp_map[fidx]) == comps)
-                func(s, eid, data);
+    if (sys->done)
+        return;
+
+    /* Run all the dependencies before the system itself */
+    for (i = 0; i < sys->n_deps; ++i) {
+        did = sys->deps[i];
+        if (!decs->systems[did].done)
+            decs_system_tick(decs, decs->systems + did);
     }
+
+    for (eid = 0; eid < decs->n_entities; ++eid)
+        if ((comps & decs->entity_comp_map[eid]) == comps)
+            func(decs, eid, data);
+
+    sys->done = true;
 }
 
-void decs_cleanup(struct decs *s)
+void decs_tick(struct decs *decs)
+{
+    uint64_t sid, eid, did;
+    struct system *sys;
+
+    for (sid = 0; sid < decs->n_systems; ++sid)
+        decs->systems[sid].done = false;
+
+    for (sid = 0; sid < decs->n_systems; ++sid)
+        decs_system_tick(decs, decs->systems + sid);
+}
+
+void decs_cleanup(struct decs *decs)
 {
     int cid;
+    uint64_t sid;
 
-    for (cid = 0; cid < s->n_comps; ++cid)
-        free(s->comps[cid].data);
+    for (cid = 0; cid < decs->n_comps; ++cid)
+        free(decs->comps[cid].data);
 
-    free(s->systems);
-    free(s->entity_comp_map);
-    free(s->comps);
+    for (sid = 0; sid < decs->n_systems; ++sid)
+        free(decs->systems[sid].deps);
+
+    free(decs->systems);
+    free(decs->entity_comp_map);
+    free(decs->comps);
 }

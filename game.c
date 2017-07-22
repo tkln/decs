@@ -27,6 +27,11 @@ struct comp_ids {
     uint64_t color;
 };
 
+struct sys_ids {
+    uint64_t phys;
+    uint64_t render;
+};
+
 struct render_ctx {
     struct comp_ids *comp_ids;
     SDL_Window *win;
@@ -135,6 +140,7 @@ int main(void)
 {
     struct decs decs;
     struct comp_ids comp_ids;
+    struct sys_ids sys_ids;
     struct render_ctx render_ctx;
     struct phys_ctx phys_ctx;
     int runnig = 1;
@@ -163,10 +169,14 @@ int main(void)
     comp_ids.phys = decs_register_comp(&decs, sizeof(struct phys_comp));
     comp_ids.color = decs_register_comp(&decs, sizeof(struct color_comp));
 
-    decs_register_system(&decs, 1<<comp_ids.phys, phys_tick, &phys_ctx);
+    sys_ids.phys = decs_register_system(&decs, 1<<comp_ids.phys, phys_tick,
+                                        &phys_ctx, NULL, 0);
 
-    decs_register_system(&decs, (1<<comp_ids.phys) | (1<<comp_ids.color),
-                         render_tick, &render_ctx);
+    sys_ids.render =
+            decs_register_system(&decs,
+                                 (1<<comp_ids.phys) | (1<<comp_ids.color),
+                                 render_tick, &render_ctx,
+                                 (uint64_t []){ sys_ids.phys }, 1);
 
     for (i = 0; i < 2048; ++i)
         create_particle(&decs, &comp_ids);

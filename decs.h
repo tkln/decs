@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef DECS_H
 #define DECS_H
@@ -16,6 +17,9 @@ struct system {
     system_func func;
     void *func_data;
     comp_bits_type comps;
+    uint64_t *deps;
+    size_t n_deps;
+    bool done;
 };
 
 struct decs {
@@ -31,8 +35,9 @@ void decs_init(struct decs *decs);
 
 uint64_t decs_register_comp(struct decs *decs, size_t size);
 
-void decs_register_system(struct decs *decs, comp_bits_type comps,
-                          system_func func, void *func_data);
+uint64_t decs_register_system(struct decs *decs, comp_bits_type comps,
+                              system_func func, void *func_data,
+                              uint64_t *deps, size_t n_deps);
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids);
 
