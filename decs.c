@@ -52,22 +52,23 @@ uint64_t decs_register_system(struct decs *decs, comp_bits_type comps,
     return decs->n_systems - 1;
 }
 
-uint64_t decs_alloc_entity(struct decs *s, comp_bits_type comp_ids)
+uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
 {
     int cid, i;
     struct component *comp;
+    size_t comp_maps_sz;
 
-    ++s->n_entities;
-    s->entity_comp_map = realloc(s->entity_comp_map,
-                                  s->n_entities * sizeof(*s->entity_comp_map));
-    s->entity_comp_map[s->n_entities - 1] = comp_ids;
+    ++decs->n_entities;
+    comp_maps_sz = decs->n_entities * sizeof(*decs->entity_comp_map);
+    decs->entity_comp_map = realloc(decs->entity_comp_map, comp_maps_sz);
+    decs->entity_comp_map[decs->n_entities - 1] = comp_ids;
 
-    for (cid = 0, i = 0; cid < s->n_comps; ++cid) {
-        comp = s->comps + cid;
-        comp->data = realloc(comp->data, comp->size * s->n_entities);
+    for (cid = 0, i = 0; cid < decs->n_comps; ++cid) {
+        comp = decs->comps + cid;
+        comp->data = realloc(comp->data, comp->size * decs->n_entities);
     }
 
-    return s->n_entities - 1;
+    return decs->n_entities - 1;
 }
 
 static void decs_system_tick(struct decs *decs, struct system *sys)
