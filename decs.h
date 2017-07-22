@@ -5,15 +5,15 @@
 
 struct decs;
 typedef uint64_t comp_bits_type;
-typedef void (*comp_func_type)(struct decs *decs, uint64_t eid, void *data);
+typedef void (*system_func)(struct decs *decs, uint64_t eid, void *data);
 
 struct component {
     size_t size;
     void *data;
 };
 
-struct comp_func {
-    comp_func_type func;
+struct system {
+    system_func func;
     void *func_data;
     comp_bits_type comps;
 };
@@ -23,16 +23,16 @@ struct decs {
     size_t n_comps;
     comp_bits_type *entity_comp_map;
     size_t n_entities;
-    struct comp_func *comp_funcs;
-    size_t n_comp_funcs;
+    struct system *systems;
+    size_t n_systems;
 };
 
 void decs_init(struct decs *decs);
 
 uint64_t decs_register_comp(struct decs *decs, size_t size);
 
-void decs_register_comp_func(struct decs *decs, comp_bits_type comps,
-                             comp_func_type func, void *func_data);
+void decs_register_system(struct decs *decs, comp_bits_type comps,
+                          system_func func, void *func_data);
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids);
 

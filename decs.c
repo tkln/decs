@@ -30,20 +30,19 @@ uint64_t decs_register_comp(struct decs *s, size_t size)
     return s->n_comps - 1;
 }
 
-void decs_register_comp_func(struct decs *s, comp_bits_type comps,
-                             comp_func_type func, void *func_data)
+void decs_register_system(struct decs *s, comp_bits_type comps,
+                          system_func func, void *func_data)
 {
-    struct comp_func *comp_func;
+    struct system *system;
     size_t i;
 
-    ++s->n_comp_funcs;
-    s->comp_funcs = realloc(s->comp_funcs,
-                            s->n_comp_funcs * sizeof(struct comp_func));
-    comp_func = &s->comp_funcs[s->n_comp_funcs - 1];
+    ++s->n_systems;
+    s->systems = realloc(s->systems, s->n_systems * sizeof(struct system));
+    system = &s->systems[s->n_systems - 1];
 
-    comp_func->func         = func;
-    comp_func->func_data    = func_data;
-    comp_func->comps        = comps;
+    system->func         = func;
+    system->func_data    = func_data;
+    system->comps        = comps;
 }
 
 uint64_t decs_alloc_entity(struct decs *s, comp_bits_type comp_ids)
@@ -68,13 +67,13 @@ void decs_tick(struct decs *s)
 {
     int fidx, eid;
     comp_bits_type comps;
-    comp_func_type func;
+    system_func func;
     void *data;
 
-    for (fidx = 0; fidx < s->n_comp_funcs; ++fidx) {
-        comps = s->comp_funcs[fidx].comps;
-        func = s->comp_funcs[fidx].func;
-        data = s->comp_funcs[fidx].func_data;
+    for (fidx = 0; fidx < s->n_systems; ++fidx) {
+        comps = s->systems[fidx].comps;
+        func = s->systems[fidx].func;
+        data = s->systems[fidx].func_data;
         for (eid = 0; eid < s->n_entities; ++eid)
             if ((comps & s->entity_comp_map[fidx]) == comps)
                 func(s, eid, data);
@@ -88,7 +87,7 @@ void decs_cleanup(struct decs *s)
     for (cid = 0; cid < s->n_comps; ++cid)
         free(s->comps[cid].data);
 
-    free(s->comp_funcs);
+    free(s->systems);
     free(s->entity_comp_map);
     free(s->comps);
 }

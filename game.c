@@ -163,10 +163,10 @@ int main(void)
     ids.phys_comp = decs_register_comp(&decs, sizeof(struct phys_comp));
     ids.color_comp = decs_register_comp(&decs, sizeof(struct color_comp));
 
-    decs_register_comp_func(&decs, 1<<ids.phys_comp, phys_tick, &phys_ctx);
+    decs_register_system(&decs, 1<<ids.phys_comp, phys_tick, &phys_ctx);
 
-    decs_register_comp_func(&decs, (1<<ids.phys_comp) | (1<<ids.color_comp),
-                             render_tick, &render_ctx);
+    decs_register_system(&decs, (1<<ids.phys_comp) | (1<<ids.color_comp),
+                         render_tick, &render_ctx);
 
     for (i = 0; i < 2048; ++i)
         create_particle(&decs, &ids);
