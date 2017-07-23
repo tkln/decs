@@ -32,22 +32,30 @@ uint64_t decs_register_comp(struct decs *s, size_t size)
 
 uint64_t decs_register_system(struct decs *decs, comp_bits_type comps,
                               system_func func, void *func_data,
-                              uint64_t *deps, size_t n_deps)
+                              uint64_t *deps)
 {
     struct system *system;
-    size_t i;
+    size_t n_deps;
 
     ++decs->n_systems;
     decs->systems = realloc(decs->systems, decs->n_systems *
                                            sizeof(struct system));
     system = &decs->systems[decs->n_systems - 1];
 
+    for (n_deps = 0; deps && deps[n_deps] != SYS_IDS_ARR_END; ++n_deps)
+        ;
+
     system->func        = func;
     system->func_data   = func_data;
     system->comps       = comps;
     system->n_deps      = n_deps;
-    system->deps        = malloc(sizeof(*deps) * n_deps);
-    memcpy(system->deps, deps, sizeof(*deps) * n_deps);
+
+    if (n_deps) {
+        system->deps    = malloc(sizeof(*deps) * n_deps);
+        memcpy(system->deps, deps, sizeof(*deps) * n_deps);
+    } else {
+        system->deps    = NULL;
+    }
 
     return decs->n_systems - 1;
 }

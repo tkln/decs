@@ -170,13 +170,13 @@ int main(void)
     comp_ids.color = decs_register_comp(&decs, sizeof(struct color_comp));
 
     sys_ids.phys = decs_register_system(&decs, 1<<comp_ids.phys, phys_tick,
-                                        &phys_ctx, NULL, 0);
+                                        &phys_ctx, NULL);
 
     sys_ids.render =
             decs_register_system(&decs,
                                  (1<<comp_ids.phys) | (1<<comp_ids.color),
                                  render_tick, &render_ctx,
-                                 (uint64_t []){ sys_ids.phys }, 1);
+                                 SYS_IDS_ARR(sys_ids.phys));
 
     for (i = 0; i < 2048; ++i)
         create_particle(&decs, &comp_ids);

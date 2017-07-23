@@ -4,6 +4,9 @@
 #ifndef DECS_H
 #define DECS_H
 
+#define SYS_IDS_ARR_END -1ull
+#define SYS_IDS_ARR(...) ((uint64_t []){ __VA_ARGS__, SYS_IDS_ARR_END })
+
 struct decs;
 typedef uint64_t comp_bits_type;
 typedef void (*system_func)(struct decs *decs, uint64_t eid, void *data);
@@ -37,7 +40,7 @@ uint64_t decs_register_comp(struct decs *decs, size_t size);
 
 uint64_t decs_register_system(struct decs *decs, comp_bits_type comps,
                               system_func func, void *func_data,
-                              uint64_t *deps, size_t n_deps);
+                              uint64_t *deps);
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids);
 
