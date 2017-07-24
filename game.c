@@ -10,6 +10,7 @@
 struct phys_comp  {
     struct vec3 pos;
     struct vec3 vel;
+    struct vec3 force;
     float mass;
 };
 
@@ -29,6 +30,8 @@ struct comp_ids {
 
 struct sys_ids {
     uint64_t phys;
+    uint64_t phys_drag;
+    uint64_t force_field;
     uint64_t render;
 };
 
@@ -36,11 +39,6 @@ struct render_ctx {
     struct comp_ids *comp_ids;
     SDL_Window *win;
     SDL_Renderer *rend;
-};
-
-struct phys_ctx {
-    struct comp_ids *comp_ids;
-    struct vec3 force_point;
 };
 
 static struct vec3 phys_drag_force(const struct phys_comp *phys)
@@ -68,18 +66,19 @@ static void phys_euler_tick(struct phys_comp *phys, struct vec3 force, float dt)
 
 static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
-    struct phys_ctx *ctx = func_data;
-    struct phys_comp *phys = decs_get_comp(decs, ctx->comp_ids->phys, eid);
+    uint64_t *phys_comp_id = func_data;
+    struct phys_comp *phys = decs_get_comp(decs, *phys_comp_id, eid);
 
     float dt = 1.0f / 60.0f;
 
-    struct vec3 force_field = { phys->pos.x - ctx->force_point.x,
-                                phys->pos.y - ctx->force_point.y,
-                                0.0f };
     struct vec3 drag_force = phys_drag_force(phys);
-    struct vec3 total_force = vec3_add(force_field, drag_force);
 
-    phys_euler_tick(phys, total_force, dt);
+    phys->force = vec3_add(phys->force, drag_force);
+
+
+    phys_euler_tick(phys, phys->force, dt);
+
+    phys->force = (struct vec3){ 0.0f, 0.0f, 0.0f };
 
     /* Wraparound */
     phys->pos.x = fmod(phys->pos.x, 1.0f);
@@ -112,6 +111,22 @@ static void render_tick(struct decs *decs, uint64_t eid, void *func_data)
 
 }
 
+struct force_field_ctx {
+    struct vec3 center_point;
+    uint64_t phys_comp_id;
+};
+
+static void force_field_tick(struct decs *decs, uint64_t eid, void *func_data)
+{
+    struct force_field_ctx *ctx = func_data;
+    struct phys_comp *phys = decs_get_comp(decs, ctx->phys_comp_id, eid);
+    struct vec3 force_field = { phys->pos.x - ctx->center_point.x,
+                                phys->pos.y - ctx->center_point.y,
+                                0.0f };
+
+    phys->force = vec3_add(phys->force, force_field);
+}
+
 void create_particle(struct decs *decs, struct comp_ids *comp_ids)
 {
     struct phys_comp *phys;
@@ -142,7 +157,8 @@ int main(void)
     struct comp_ids comp_ids;
     struct sys_ids sys_ids;
     struct render_ctx render_ctx;
-    struct phys_ctx phys_ctx;
+    struct force_field_ctx force_field_ctx;
+    uint64_t render_comps;
     int runnig = 1;
     int i;
     int mx, my;
@@ -162,21 +178,26 @@ int main(void)
     render_ctx.rend = rend;
     render_ctx.win = win;
 
-    phys_ctx.comp_ids = &comp_ids;
+    //phys_ctx.comp_ids = &comp_ids;
 
     decs_init(&decs);
 
     comp_ids.phys = decs_register_comp(&decs, sizeof(struct phys_comp));
     comp_ids.color = decs_register_comp(&decs, sizeof(struct color_comp));
 
-    sys_ids.phys = decs_register_system(&decs, 1<<comp_ids.phys, phys_tick,
-                                        &phys_ctx, NULL);
+    force_field_ctx.phys_comp_id = comp_ids.phys;
 
-    sys_ids.render =
-            decs_register_system(&decs,
-                                 (1<<comp_ids.phys) | (1<<comp_ids.color),
-                                 render_tick, &render_ctx,
-                                 SYS_IDS_ARR(sys_ids.phys));
+    render_comps = (1<<comp_ids.phys) | (1<<comp_ids.color);
+
+    sys_ids.force_field = decs_register_system(&decs, 1<<comp_ids.phys,
+                                               force_field_tick,
+                                               &force_field_ctx, NULL);
+    sys_ids.phys = decs_register_system(&decs, 1<<comp_ids.phys, phys_tick,
+                                        &comp_ids.phys,
+                                        SYS_IDS_ARR(sys_ids.force_field));
+    sys_ids.render = decs_register_system(&decs, render_comps, render_tick,
+                                          &render_ctx,
+                                          SYS_IDS_ARR(sys_ids.phys));
 
     for (i = 0; i < 2048; ++i)
         create_particle(&decs, &comp_ids);
@@ -190,8 +211,8 @@ int main(void)
         create_particle(&decs, &comp_ids);
 
         SDL_GetMouseState(&mx, &my);
-        phys_ctx.force_point.x = mx / 640.0f;
-        phys_ctx.force_point.y = my / 480.0f;
+        force_field_ctx.center_point.x = mx / 640.0f;
+        force_field_ctx.center_point.y = my / 480.0f;
 
         SDL_SetRenderDrawColor(rend, 0x22, 0x22, 0x22, 0xff);
         SDL_RenderClear(rend);
