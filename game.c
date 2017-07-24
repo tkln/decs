@@ -41,8 +41,11 @@ struct render_ctx {
     SDL_Renderer *rend;
 };
 
-static struct vec3 phys_drag_force(const struct phys_comp *phys)
+static void phys_drag_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
+    uint64_t *phys_comp_id = func_data;
+    struct phys_comp *phys = decs_get_comp(decs, *phys_comp_id, eid);
+
     const float fluid_density = 1.2f; // Air
     const float area = 10.10f;
     const float drag_coef = 0.47f; // Sphere
@@ -50,7 +53,7 @@ static struct vec3 phys_drag_force(const struct phys_comp *phys)
     const struct vec3 vel2 = vec3_pow2(phys->vel);
     struct vec3 drag_force = vec3_muls(vel2, total_drag_coef);
 
-    return drag_force;
+    phys->force = vec3_add(phys->force, drag_force);
 }
 
 static void phys_euler_tick(struct phys_comp *phys, struct vec3 force, float dt)
@@ -70,11 +73,6 @@ static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
     struct phys_comp *phys = decs_get_comp(decs, *phys_comp_id, eid);
 
     float dt = 1.0f / 60.0f;
-
-    struct vec3 drag_force = phys_drag_force(phys);
-
-    phys->force = vec3_add(phys->force, drag_force);
-
 
     phys_euler_tick(phys, phys->force, dt);
 
@@ -145,6 +143,9 @@ void create_particle(struct decs *decs, struct comp_ids *comp_ids)
     phys->vel.x = sin(eid * 0.1) * 0.004f;
     phys->vel.y = sin(eid * 0.1) * 0.005f;
     phys->vel.z = sin(eid * 0.1) * 0.006f;
+    phys->force.x = 0.0f;
+    phys->force.y = 0.0f;
+    phys->force.z = 0.0f;
     phys->mass = 1.0f;
     color->r = eid * 0.1 * 2;
     color->g = eid * 0.3 * 2;
@@ -178,8 +179,6 @@ int main(void)
     render_ctx.rend = rend;
     render_ctx.win = win;
 
-    //phys_ctx.comp_ids = &comp_ids;
-
     decs_init(&decs);
 
     comp_ids.phys = decs_register_comp(&decs, sizeof(struct phys_comp));
@@ -192,9 +191,13 @@ int main(void)
     sys_ids.force_field = decs_register_system(&decs, 1<<comp_ids.phys,
                                                force_field_tick,
                                                &force_field_ctx, NULL);
+    sys_ids.phys_drag = decs_register_system(&decs, 1<<comp_ids.phys,
+                                             phys_drag_tick, &comp_ids.phys,
+                                             NULL);
     sys_ids.phys = decs_register_system(&decs, 1<<comp_ids.phys, phys_tick,
                                         &comp_ids.phys,
-                                        SYS_IDS_ARR(sys_ids.force_field));
+                                        SYS_IDS_ARR(sys_ids.force_field,
+                                                    sys_ids.phys_drag));
     sys_ids.render = decs_register_system(&decs, render_comps, render_tick,
                                           &render_ctx,
                                           SYS_IDS_ARR(sys_ids.phys));
