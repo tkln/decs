@@ -51,7 +51,7 @@ static void phys_drag_tick(struct decs *decs, uint64_t eid, void *func_data)
     const float area = 10.10f;
     const float drag_coef = 0.47f; // Sphere
     const float total_drag_coef = -0.5f * fluid_density * drag_coef * area;
-    const struct vec3 vel2 = vec3_pow2(phys->vel);
+    const struct vec3 vel2 = vec3_spow2(phys->vel);
     struct vec3 drag_force = vec3_muls(vel2, total_drag_coef);
 
     phys->force = vec3_add(phys->force, drag_force);
