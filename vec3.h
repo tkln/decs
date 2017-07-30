@@ -22,6 +22,14 @@ static inline struct vec3 vec3_muls(const struct vec3 a, const float b)
     return r;
 }
 
+static inline struct vec3 vec3_spow2(const struct vec3 a)
+{
+    struct vec3 r = { a.x * a.x * (a.x < 0.0f ? -1.0f : 1.0f),
+                      a.y * a.y * (a.y < 0.0f ? -1.0f : 1.0f),
+                      a.z * a.z * (a.z < 0.0f ? -1.0f : 1.0f) };
+    return r;
+}
+
 static inline struct vec3 vec3_pow2(const struct vec3 a)
 {
     struct vec3 r = { a.x * a.x, a.y * a.y, a.z * a.z };
