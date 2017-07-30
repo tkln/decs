@@ -16,6 +16,22 @@ static inline struct vec3 vec3_add(const struct vec3 a, const struct vec3 b)
     return s;
 }
 
+static inline struct vec3 vec3_sub(const struct vec3 a, const struct vec3 b)
+{
+    struct vec3 s = { a.x - b.x, a.y - b.y, a.z - b.z };
+    return s;
+}
+
+static inline float vec3_sum(const struct vec3 a)
+{
+    return a.x + a.y + a.z;
+}
+
+static inline struct vec3 vec3_inv(const struct vec3 a)
+{
+    return (struct vec3) { 1.0f / a.x, 1.0f / a.y, 1.0f / a.z };
+}
+
 static inline struct vec3 vec3_muls(const struct vec3 a, const float b)
 {
     struct vec3 r = { a.x * b, a.y * b, a.z * b };
