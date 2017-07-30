@@ -80,7 +80,6 @@ static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
     phys->force = (struct vec3){ 0.0f, 0.0f, 0.0f };
 
     if (phys->pos.y > 1.0f) {
-        phys->pos.y -= 0.1f;
         phys->vel.y *= -0.9f;
     }
     if (phys->pos.x > 1.0f)
