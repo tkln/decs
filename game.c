@@ -36,18 +36,16 @@ struct sys_ids {
     uint64_t render;
 };
 
-struct render_ctx {
-    struct comp_ids *comp_ids;
-    SDL_Window *win;
-    SDL_Renderer *rend;
+struct phys_drag_ctx {
+    struct phys_comp *phys_base;
 };
 
 static void phys_drag_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
-    uint64_t *phys_comp_id = func_data;
-    struct phys_comp *phys = decs_get_comp(decs, *phys_comp_id, eid);
+    struct phys_drag_ctx *ctx = func_data;
+    struct phys_comp *phys = ctx->phys_base + eid;
 
-    const float fluid_density = 1.2f; // Air
+    const float fluid_density = 10.2f; // Air
     const float area = 10.10f;
     const float drag_coef = 0.47f; // Sphere
     const float total_drag_coef = -0.5f * fluid_density * drag_coef * area;
@@ -56,6 +54,10 @@ static void phys_drag_tick(struct decs *decs, uint64_t eid, void *func_data)
 
     phys->force = vec3_add(phys->force, drag_force);
 }
+
+struct phys_ctx {
+    struct phys_comp *phys_base;
+};
 
 static void phys_euler_tick(struct phys_comp *phys, struct vec3 force, float dt)
 {
@@ -70,8 +72,8 @@ static void phys_euler_tick(struct phys_comp *phys, struct vec3 force, float dt)
 
 static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
-    uint64_t *phys_comp_id = func_data;
-    struct phys_comp *phys = decs_get_comp(decs, *phys_comp_id, eid);
+    struct phys_ctx *phys_ctx = func_data;
+    struct phys_comp *phys = phys_ctx->phys_base + eid;
 
     float dt = 1.0f / 60.0f;
 
@@ -88,26 +90,40 @@ static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
         phys->pos.x += 1.0f;
 }
 
+struct gravity_ctx {
+    struct phys_comp *phys_base;
+};
+
 static void gravity_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
-    uint64_t *phys_comp_id = func_data;
-    struct phys_comp *phys = decs_get_comp(decs, *phys_comp_id, eid);
+    struct gravity_ctx *ctx = func_data;
+    struct phys_comp *phys = ctx->phys_base + eid;
 
     phys->force  = vec3_add(phys->force, (struct vec3) { 0.0f, 9.81f, 0.0f });
 }
+
+struct render_ctx_aux {
+    SDL_Window *win;
+    SDL_Renderer *rend;
+};
+
+struct render_ctx {
+    struct render_ctx_aux *aux;
+    struct phys_comp *phys_base;
+    struct color_comp *color_base;
+};
 
 int win_w = 1280, win_h = 720;
 
 static void render_tick(struct decs *decs, uint64_t eid, void *func_data)
 {
     struct render_ctx *ctx = func_data;
-    struct phys_comp *phys = decs_get_comp(decs, ctx->comp_ids->phys, eid);
-    struct color_comp *color = decs_get_comp(decs, ctx->comp_ids->color, eid);
+    struct phys_comp *phys = ctx->phys_base + eid;
+    struct color_comp *color = ctx->color_base + eid;
 
-
-    SDL_SetRenderDrawColor(ctx->rend, 0xff * color->r, 0xff * color->g,
+    SDL_SetRenderDrawColor(ctx->aux->rend, 0xff * color->r, 0xff * color->g,
                            0xff * color->b, 0xff);
-    SDL_RenderDrawPoint(ctx->rend, phys->pos.x * win_w, phys->pos.y * win_h);
+    SDL_RenderDrawPoint(ctx->aux->rend, phys->pos.x * win_w, phys->pos.y * win_h);
 
 }
 
@@ -142,12 +158,12 @@ int main(void)
 {
     struct decs decs;
     struct comp_ids comp_ids;
-    struct sys_ids sys_ids;
-    struct render_ctx render_ctx;
     uint64_t render_comps;
     int runnig = 1;
     int i;
     int mx, my;
+
+    struct render_ctx_aux render_ctx_aux;
 
     SDL_Window *win;
     SDL_Renderer *rend;
@@ -160,30 +176,23 @@ int main(void)
                            SDL_WINDOWPOS_UNDEFINED, win_w, win_h, 0);
     rend = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    render_ctx.comp_ids = &comp_ids;
-    render_ctx.rend = rend;
-    render_ctx.win = win;
+    render_ctx_aux.rend = rend;
+    render_ctx_aux.win = win;
 
     decs_init(&decs);
 
-    comp_ids.phys = decs_register_comp(&decs, sizeof(struct phys_comp));
-    comp_ids.color = decs_register_comp(&decs, sizeof(struct color_comp));
+    comp_ids.phys = decs_register_comp(&decs, "phys", sizeof(struct phys_comp));
+    comp_ids.color = decs_register_comp(&decs, "color",
+                                        sizeof(struct color_comp));
 
-    render_comps = (1<<comp_ids.phys) | (1<<comp_ids.color);
-
-    sys_ids.gravity = decs_register_system(&decs, 1<<comp_ids.phys,
-                                           gravity_tick, &comp_ids.phys,
-                                           NULL);
-    sys_ids.phys_drag = decs_register_system(&decs, 1<<comp_ids.phys,
-                                             phys_drag_tick, &comp_ids.phys,
-                                             NULL);
-    sys_ids.phys = decs_register_system(&decs, 1<<comp_ids.phys, phys_tick,
-                                        &comp_ids.phys,
-                                        SYS_IDS_ARR(sys_ids.phys_drag,
-                                                    sys_ids.gravity));
-    sys_ids.render = decs_register_system(&decs, render_comps, render_tick,
-                                          &render_ctx,
-                                          SYS_IDS_ARR(sys_ids.phys));
+    decs_register_system(&decs, "gravity", STR_ARR("phys"), NULL, gravity_tick,
+                         NULL, NULL);
+    decs_register_system(&decs, "phys_drag", STR_ARR("phys"), NULL,
+                         phys_drag_tick, NULL, NULL);
+    decs_register_system(&decs, "phys", STR_ARR("phys"), NULL, phys_tick, NULL,
+                         STR_ARR("phys_drag", "gravity"));
+    decs_register_system(&decs, "render", STR_ARR("phys", "color"), NULL,
+                         render_tick, &render_ctx_aux, STR_ARR("phys"));
 
     while (runnig) {
         while (SDL_PollEvent(&event)) {
