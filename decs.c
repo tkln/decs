@@ -42,8 +42,8 @@ void *decs_get_comp_base(struct decs *decs, const char *name)
     return NULL;
 }
 
-void decs_system_prepare(struct decs *decs, const char **comp_names, void *ctx_mem,
-                         void *aux_ctx)
+void decs_system_prepare(struct decs *decs, const uint64_t *comp_ids,
+                         size_t n_comps, void *ctx_mem, void *aux_ctx)
 {
     size_t i;
     struct decs_ctx *ctx = ctx_mem;
@@ -56,8 +56,8 @@ void decs_system_prepare(struct decs *decs, const char **comp_names, void *ctx_m
         comp_bases = ctx->comp_bases_noaux;
     }
 
-    for (i = 0; comp_names[i]; ++i)
-        comp_bases[i] = decs_get_comp_base(decs, comp_names[i]);
+    for (i = 0; i < n_comps; ++i)
+        comp_bases[i] = decs->comps[comp_ids[i]].data;
 }
 
 static uint64_t decs_comp_list_to_bits(struct decs *decs, const char **comps)
@@ -75,14 +75,10 @@ static uint64_t decs_comp_list_to_bits(struct decs *decs, const char **comps)
     return bits;
 }
 
-uint64_t decs_register_system(struct decs *decs, const char *name,
-                              const char **comps,
-                              system_prepare_func prepare_func,
-                              system_func func, void *aux_ctx,
-                              const char **dep_names)
+uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg)
 {
     struct system *system;
-    size_t n_deps;
+    size_t n_deps, n_comps;
     size_t i, j;
     size_t ctx_sz = 0;
 
@@ -91,7 +87,9 @@ uint64_t decs_register_system(struct decs *decs, const char *name,
                                            sizeof(struct system));
     system = &decs->systems[decs->n_systems - 1];
 
-    for (n_deps = 0; dep_names && dep_names[n_deps]; ++n_deps)
+    for (n_deps = 0; reg->dep_names && reg->dep_names[n_deps]; ++n_deps)
+        ;
+    for (n_comps = 0; reg->comp_names && reg->comp_names[n_comps]; ++n_comps)
         ;
 
     if (n_deps)
@@ -99,35 +97,52 @@ uint64_t decs_register_system(struct decs *decs, const char *name,
     else
         system->deps = NULL;
 
+    if (n_comps)
+        system->comps = malloc(sizeof(*system->comps) * n_comps);
+    else
+        system->comps = NULL;
+
     for (i = 0; i < n_deps; ++i) {
         for (j = 0; j < (decs->n_systems - 1); ++j) {
-            if (!strcmp(decs->systems[j].name, dep_names[i])) {
+            if (!strcmp(decs->systems[j].name, reg->dep_names[i])) {
                 system->deps[i] = j;
                 break;
             }
         }
         if (j == (decs->n_systems - 1))
             fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
-                    dep_names[i]);
+                    reg->dep_names[i]);
     }
 
-    for (i = 0; comps[i]; ++i)
-        ctx_sz += sizeof(void *);
-    if (aux_ctx)
+    for (i = 0; i < n_comps; ++i) {
+        for (j = 0; j < decs->n_comps; ++j) {
+            if (!strcmp(decs->comps[j].name, reg->comp_names[i])) {
+                system->comps[i] = j;
+                break;
+            }
+        }
+        if (j == decs->n_comps)
+            fprintf(stderr, "Could not find id for comp name \"%s\"\n",
+                    reg->comp_names[i]);
+    }
+
+    ctx_sz = n_comps * sizeof(void *);
+    if (reg->aux_ctx)
         ctx_sz += sizeof(void *);
 
-    system->func            = func;
+    system->func            = reg->func;
 
-    system->prepare_func    = prepare_func ?: decs_system_prepare;
+    system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
     system->ctx_sz          = ctx_sz;
     system->ctx             = malloc(ctx_sz);
-    system->aux_ctx         = aux_ctx;
-    system->comp_names      = comps;
-    system->comp_bits       = decs_comp_list_to_bits(decs, comps);
+    system->aux_ctx         = reg->aux_ctx;
+    system->comp_bits       = decs_comp_list_to_bits(decs, reg->comp_names);
+    system->n_comps         = n_comps;
     system->n_deps          = n_deps;
-    system->name            = name;
+    system->name            = reg->name;
 
     return decs->n_systems - 1;
+
 }
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
@@ -166,7 +181,7 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
             decs_system_tick(decs, decs->systems + did);
     }
 
-    sys->prepare_func(decs, sys->comp_names, sys->ctx, sys->aux_ctx);
+    sys->prepare_func(decs, sys->comps, sys->n_comps, sys->ctx, sys->aux_ctx);
     for (eid = 0; eid < decs->n_entities; ++eid)
         if ((comps & decs->entity_comp_map[eid]) == comps)
             func(decs, eid, data);
