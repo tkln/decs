@@ -28,14 +28,6 @@ struct comp_ids {
     uint64_t color;
 };
 
-struct sys_ids {
-    uint64_t phys;
-    uint64_t phys_drag;
-    uint64_t force_field;
-    uint64_t gravity;
-    uint64_t render;
-};
-
 struct phys_drag_ctx {
     struct phys_comp *phys_base;
 };
@@ -54,6 +46,12 @@ static void phys_drag_tick(struct decs *decs, uint64_t eid, void *func_data)
 
     phys->force = vec3_add(phys->force, drag_force);
 }
+
+static const struct system_reg phys_drag_sys = {
+    .name       = "phys_drag",
+    .comp_names = STR_ARR("phys"),
+    .func       = phys_drag_tick,
+};
 
 struct phys_ctx {
     struct phys_comp *phys_base;
@@ -90,6 +88,13 @@ static void phys_tick(struct decs *decs, uint64_t eid, void *func_data)
         phys->pos.x += 1.0f;
 }
 
+static const struct system_reg phys_sys = {
+    .name       = "phys",
+    .comp_names = STR_ARR("phys"),
+    .func       = phys_tick,
+    .dep_names  = STR_ARR("phys_drag", "gravity"),
+};
+
 struct gravity_ctx {
     struct phys_comp *phys_base;
 };
@@ -101,6 +106,12 @@ static void gravity_tick(struct decs *decs, uint64_t eid, void *func_data)
 
     phys->force  = vec3_add(phys->force, (struct vec3) { 0.0f, 9.81f, 0.0f });
 }
+
+static const struct system_reg gravity_sys = {
+    .name       = "gravity",
+    .comp_names = STR_ARR("phys"),
+    .func       = gravity_tick,
+};
 
 struct render_ctx_aux {
     SDL_Window *win;
@@ -126,6 +137,13 @@ static void render_tick(struct decs *decs, uint64_t eid, void *func_data)
     SDL_RenderDrawPoint(ctx->aux->rend, phys->pos.x * win_w, phys->pos.y * win_h);
 
 }
+
+static struct system_reg render_sys = {
+    .name       = "render",
+    .comp_names = STR_ARR("phys", "color"),
+    .func       = render_tick,
+    .dep_names  = STR_ARR("phys"),
+};
 
 void create_particle(struct decs *decs, struct comp_ids *comp_ids)
 {
@@ -178,6 +196,7 @@ int main(void)
 
     render_ctx_aux.rend = rend;
     render_ctx_aux.win = win;
+    render_sys.aux_ctx = &render_ctx_aux;
 
     decs_init(&decs);
 
@@ -185,14 +204,10 @@ int main(void)
     comp_ids.color = decs_register_comp(&decs, "color",
                                         sizeof(struct color_comp));
 
-    decs_register_system(&decs, "gravity", STR_ARR("phys"), NULL, gravity_tick,
-                         NULL, NULL);
-    decs_register_system(&decs, "phys_drag", STR_ARR("phys"), NULL,
-                         phys_drag_tick, NULL, NULL);
-    decs_register_system(&decs, "phys", STR_ARR("phys"), NULL, phys_tick, NULL,
-                         STR_ARR("phys_drag", "gravity"));
-    decs_register_system(&decs, "render", STR_ARR("phys", "color"), NULL,
-                         render_tick, &render_ctx_aux, STR_ARR("phys"));
+    decs_register_system(&decs, &gravity_sys);
+    decs_register_system(&decs, &phys_drag_sys);
+    decs_register_system(&decs, &phys_sys);
+    decs_register_system(&decs, &render_sys);
 
     while (runnig) {
         while (SDL_PollEvent(&event)) {
