@@ -133,7 +133,6 @@ uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg)
     system->func            = reg->func;
 
     system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
-    system->ctx_sz          = ctx_sz;
     system->ctx             = malloc(ctx_sz);
     system->aux_ctx         = reg->aux_ctx;
     system->comp_bits       = decs_comp_list_to_bits(decs, reg->comp_names);

@@ -34,7 +34,6 @@ struct system {
     const char *name;
     system_func func;
     system_prepare_func prepare_func;
-    size_t ctx_sz;
     void *aux_ctx;
     void *ctx;
     uint64_t *comps;
