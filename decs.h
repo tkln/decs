@@ -1,8 +1,10 @@
+#ifndef DECS_H
+#define DECS_H
+
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifndef DECS_H
-#define DECS_H
+#include "perf.h"
 
 #define SYS_IDS_ARR_END -1ull
 #define SYS_IDS_ARR(...) ((uint64_t []){ __VA_ARGS__, SYS_IDS_ARR_END })
@@ -42,6 +44,7 @@ struct system {
     uint64_t *deps;
     size_t n_deps;
     bool done;
+    struct perf_stats perf_stats;
 };
 
 struct decs {

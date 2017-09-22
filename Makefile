@@ -1,6 +1,6 @@
 CFLAGS+=-std=c99 -g
 LDFLAGS+=-lSDL2 -lm
-OBJS=decs.o game.o
+OBJS=decs.o game.o perf.o
 
 all: game
 

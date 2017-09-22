@@ -7,6 +7,7 @@
 void decs_init(struct decs *decs)
 {
     memset(decs, 0, sizeof(*decs));
+    perf_measurement_init();
 }
 
 /* TODO:
@@ -181,9 +182,11 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
     }
 
     sys->prepare_func(decs, sys->comps, sys->n_comps, sys->ctx, sys->aux_ctx);
+    perf_measurement_start();
     for (eid = 0; eid < decs->n_entities; ++eid)
         if ((comps & decs->entity_comp_map[eid]) == comps)
             func(decs, eid, data);
+    perf_measurement_end(&sys->perf_stats);
 
     sys->done = true;
 }

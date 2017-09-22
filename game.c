@@ -222,6 +222,22 @@ int main(void)
 
         decs_tick(&decs);
 
+        printf("entity count: %zu\n", decs.n_entities);
+        for (i = 0; i < decs.n_systems; ++i) {
+            struct perf_stats stats = decs.systems[i].perf_stats;
+            printf("%s:\n", decs.systems[i].name);
+            printf("\tcpu cycles: %lld, (%lld)\n", stats.cpu_cycles,
+                   stats.cpu_cycles / decs.n_entities);
+            printf("\tl3 cache refs: %lld, (%lld)\n", stats.cache_refs,
+                   stats.cache_refs / decs.n_entities);
+            printf("\tl3 cache misses: %lld, (%lld)\n", stats.cache_misses,
+                   stats.cache_misses / decs.n_entities);
+            printf("\tbranch instructions: %lld, (%lld)\n", stats.branch_instrs,
+                   stats.branch_instrs / decs.n_entities);
+            printf("\tbranch misses: %lld, (%lld)\n", stats.branch_misses,
+                   stats.branch_misses / decs.n_entities);
+        }
+
         SDL_RenderPresent(rend);
 
         SDL_Delay(16);
