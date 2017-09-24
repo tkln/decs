@@ -92,7 +92,7 @@ static const struct system_reg phys_sys = {
     .name       = "phys",
     .comp_names = STR_ARR("phys"),
     .func       = phys_tick,
-    .dep_names  = STR_ARR("phys_drag", "gravity"),
+    .dep_names  = STR_ARR("phys_drag", "phys_gravity"),
 };
 
 struct gravity_ctx {
@@ -108,7 +108,7 @@ static void gravity_tick(struct decs *decs, uint64_t eid, void *func_data)
 }
 
 static const struct system_reg gravity_sys = {
-    .name       = "gravity",
+    .name       = "phys_gravity",
     .comp_names = STR_ARR("phys"),
     .func       = gravity_tick,
 };
