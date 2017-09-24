@@ -38,7 +38,12 @@ static void phys_drag_tick(struct decs *decs, uint64_t eid, void *func_data)
     struct phys_drag_ctx *ctx = func_data;
     struct phys_comp *phys = ctx->phys_base + eid;
 
-    const float fluid_density = 10.2f; // Air
+
+#if 1
+    const float fluid_density = 1.2f; /* Air */
+#else
+    const float fluid_density = 999.9f; /* Water */
+#endif
     const float area = 10.10f;
     const float drag_coef = 0.47f; // Sphere
     const float total_drag_coef = -0.5f * fluid_density * drag_coef * area;
