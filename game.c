@@ -6,6 +6,7 @@
 
 #include "decs.h"
 #include "vec3.h"
+#include "ttf.h"
 
 struct phys_comp  {
     struct vec3 pos;
@@ -169,7 +170,32 @@ void create_particle(struct decs *decs, struct comp_ids *comp_ids)
     color->r = sin(eid * 0.01) * 2;
     color->g = cos(eid * 0.03) * 2;
     color->b = eid * 0.02 * 2;
-    printf("eid: %lu\n", eid);
+}
+
+static void render_system_perf_stats(const struct decs *decs)
+{
+    int pt_size = 16;
+    size_t i;
+    struct perf_stats *stats;
+
+    ttf_printf(0, 0, "entity count: %zu", decs->n_entities);
+    for (i = 0; i < decs->n_systems; ++i) {
+        stats = &decs->systems[i].perf_stats;
+        ttf_printf(0, pt_size * (1 + i * 6), "%s:", decs->systems[i].name);
+        ttf_printf(64, pt_size * (2 + i * 6), "cpu cycles: %lld, (%lld)",
+                 stats->cpu_cycles, stats->cpu_cycles / decs->n_entities);
+        ttf_printf(64, pt_size * (3 + i * 6), "l3 cache refs: %lld, (%lld)",
+                 stats->cache_refs, stats->cache_refs / decs->n_entities);
+        ttf_printf(64, pt_size * (4 + i * 6), "l3 cache misses: %lld, (%lld)",
+                   stats->cache_misses,
+                   stats->cache_misses / decs->n_entities);
+        ttf_printf(64, pt_size * (5 + i * 6),
+                   "branch instructions: %lld, (%lld)", stats->branch_instrs,
+                   stats->branch_instrs / decs->n_entities);
+        ttf_printf(64, pt_size * (6 + i * 6), "branch misses: %lld, (%lld)",
+                   stats->branch_misses,
+                   stats->branch_misses / decs->n_entities);
+    }
 }
 
 int main(void)
@@ -199,6 +225,7 @@ int main(void)
     render_sys.aux_ctx = &render_ctx_aux;
 
     decs_init(&decs);
+    ttf_init(rend, win, NULL);
 
     comp_ids.phys = decs_register_comp(&decs, "phys", sizeof(struct phys_comp));
     comp_ids.color = decs_register_comp(&decs, "color",
@@ -221,22 +248,7 @@ int main(void)
         SDL_RenderClear(rend);
 
         decs_tick(&decs);
-
-        printf("entity count: %zu\n", decs.n_entities);
-        for (i = 0; i < decs.n_systems; ++i) {
-            struct perf_stats stats = decs.systems[i].perf_stats;
-            printf("%s:\n", decs.systems[i].name);
-            printf("\tcpu cycles: %lld, (%lld)\n", stats.cpu_cycles,
-                   stats.cpu_cycles / decs.n_entities);
-            printf("\tl3 cache refs: %lld, (%lld)\n", stats.cache_refs,
-                   stats.cache_refs / decs.n_entities);
-            printf("\tl3 cache misses: %lld, (%lld)\n", stats.cache_misses,
-                   stats.cache_misses / decs.n_entities);
-            printf("\tbranch instructions: %lld, (%lld)\n", stats.branch_instrs,
-                   stats.branch_instrs / decs.n_entities);
-            printf("\tbranch misses: %lld, (%lld)\n", stats.branch_misses,
-                   stats.branch_misses / decs.n_entities);
-        }
+        render_system_perf_stats(&decs);
 
         SDL_RenderPresent(rend);
 
