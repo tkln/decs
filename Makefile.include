@@ -1,0 +1,3 @@
+DECS_OBJS=decs.o perf.o
+INCDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+OBJS+=$(addprefix $(INCDIR), $(DECS_OBJS))
