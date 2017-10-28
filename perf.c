@@ -68,7 +68,7 @@ int perf_measurement_init(void)
     }
 }
 
-void perf_measurement_start(void)
+int perf_measurement_start(void)
 {
     size_t i;
 
@@ -78,16 +78,37 @@ void perf_measurement_start(void)
     }
 }
 
-void perf_measurement_end(struct perf_stats *stats)
+int perf_measurement_end(struct perf_stats *stats)
 {
     size_t i;
+    int ret;
 
-    for (i = 0; i < sizeof(events) / sizeof(events[0]); ++i)
-        ioctl(*events[i].fd, PERF_EVENT_IOC_DISABLE, 0);
+    for (i = 0; i < sizeof(events) / sizeof(events[0]); ++i) {
+        ret = ioctl(*events[i].fd, PERF_EVENT_IOC_DISABLE, 0);
+        if (ret < 0) {
+            perror("perf event ioctl failed");
+            return ret;
+        }
+    }
 
-    read(cpu_cycles_fd, &stats->cpu_cycles, sizeof(stats->cpu_cycles));
-    read(cache_refs_fd, &stats->cache_refs, sizeof(stats->cache_refs));
-    read(cache_misses_fd, &stats->cache_misses, sizeof(stats->cache_misses));
-    read(branch_instrs_fd, &stats->branch_instrs, sizeof(stats->branch_instrs));
-    read(branch_misses_fd, &stats->branch_misses, sizeof(stats->branch_misses));
+    ret = read(cpu_cycles_fd, &stats->cpu_cycles, sizeof(stats->cpu_cycles));
+    if (ret < 0)
+        goto read_fail;
+    ret = read(cache_refs_fd, &stats->cache_refs, sizeof(stats->cache_refs));
+    if (ret < 0)
+        goto read_fail;
+    ret = read(cache_misses_fd, &stats->cache_misses, sizeof(stats->cache_misses));
+    if (ret < 0)
+        goto read_fail;
+    ret = read(branch_instrs_fd, &stats->branch_instrs, sizeof(stats->branch_instrs));
+    if (ret < 0)
+        goto read_fail;
+    ret = read(branch_misses_fd, &stats->branch_misses, sizeof(stats->branch_misses));
+    if (ret < 0)
+        goto read_fail;
+
+    return 0;
+read_fail:
+    perror("Reading perf events failed");
+    return ret;
 }

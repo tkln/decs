@@ -10,7 +10,7 @@ struct perf_stats {
 };
 
 int perf_measurement_init(void);
-void perf_measurement_start(void);
-void perf_measurement_end(struct perf_stats *stats);
+int perf_measurement_start(void);
+int perf_measurement_end(struct perf_stats *stats);
 
 #endif
