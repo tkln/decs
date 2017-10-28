@@ -1,0 +1,7 @@
+* A heuristic for replacing an entity
+    - A similarity score is calculated by counting the number of component bits
+      in common with the entity preceding the slot under examination.
+    - In case multiple entities need to be added, they are inserted to the place
+      with currently the best similarity score.
+    - The insertion is done in descending order of active dataset size of the
+      entity (the sum of the sizes of the active components).
