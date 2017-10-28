@@ -76,7 +76,8 @@ static uint64_t decs_comp_list_to_bits(struct decs *decs, const char **comps)
     return bits;
 }
 
-uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg)
+int decs_register_system(struct decs *decs, const struct system_reg *reg,
+                         uint64_t *sid)
 {
     struct system *system;
     size_t n_deps, n_comps;
@@ -110,9 +111,11 @@ uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg)
                 break;
             }
         }
-        if (j == (decs->n_systems - 1))
+        if (j == (decs->n_systems - 1)) {
             fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
                     reg->dep_names[i]);
+            return -1;
+        }
     }
 
     for (i = 0; i < n_comps; ++i) {
@@ -122,9 +125,11 @@ uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg)
                 break;
             }
         }
-        if (j == decs->n_comps)
+        if (j == decs->n_comps) {
             fprintf(stderr, "Could not find id for comp name \"%s\"\n",
                     reg->comp_names[i]);
+            return -1;
+        }
     }
 
     ctx_sz = n_comps * sizeof(void *);
@@ -141,8 +146,10 @@ uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg)
     system->n_deps          = n_deps;
     system->name            = reg->name;
 
-    return decs->n_systems - 1;
+    if (sid)
+        *sid = decs->n_systems - 1;
 
+    return 0;
 }
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)

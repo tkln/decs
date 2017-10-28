@@ -75,7 +75,8 @@ void *decs_get_comp_base(struct decs *decs, const char *comp_name);
 void decs_system_prepare(struct decs *decs, const uint64_t *comp_ids,
                          size_t n_comps, void *ctx, void *aux_ctx);
 
-uint64_t decs_register_system(struct decs *decs, const struct system_reg *reg);
+int decs_register_system(struct decs *decs, const struct system_reg *reg,
+                         uint64_t *sid);
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids);
 
