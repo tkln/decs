@@ -65,16 +65,26 @@ int perf_measurement_init(void)
             return -1;
         }
     }
+
+    return 0;
 }
 
 int perf_measurement_start(void)
 {
     size_t i;
+    int ret;
 
     for (i = 0; i < sizeof(events) / sizeof(events[0]); ++i) {
-        ioctl(*events[i].fd, PERF_EVENT_IOC_RESET, 0);
-        ioctl(*events[i].fd, PERF_EVENT_IOC_ENABLE, 0);
+        ret = ioctl(*events[i].fd, PERF_EVENT_IOC_RESET, 0);
+        if (ret < 0)
+            return ret;
+
+        ret = ioctl(*events[i].fd, PERF_EVENT_IOC_ENABLE, 0);
+        if (ret < 0)
+            return ret;
     }
+
+    return 0;
 }
 
 int perf_measurement_end(struct perf_stats *stats)
