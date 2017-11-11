@@ -48,7 +48,6 @@ static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
 int perf_measurement_init(void)
 {
     struct perf_event_attr pe;
-    long long count;
     size_t i;
 
     for (i = 0; i < sizeof(events) / sizeof(events[0]); ++i) {
