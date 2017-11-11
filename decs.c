@@ -154,7 +154,7 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
 {
-    int cid, i;
+    int cid;
     struct component *comp;
     size_t comp_maps_sz;
 
@@ -163,7 +163,7 @@ uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
     decs->entity_comp_map = realloc(decs->entity_comp_map, comp_maps_sz);
     decs->entity_comp_map[decs->n_entities - 1] = comp_ids;
 
-    for (cid = 0, i = 0; cid < decs->n_comps; ++cid) {
+    for (cid = 0; cid < decs->n_comps; ++cid) {
         comp = decs->comps + cid;
         comp->data = realloc(comp->data, comp->size * decs->n_entities);
     }
@@ -200,8 +200,7 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
 
 void decs_tick(struct decs *decs)
 {
-    uint64_t sid, eid, did;
-    struct system *sys;
+    uint64_t sid;
 
     for (sid = 0; sid < decs->n_systems; ++sid)
         decs->systems[sid].done = false;
