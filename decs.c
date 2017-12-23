@@ -89,9 +89,9 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
                                            sizeof(struct system));
     system = &decs->systems[decs->n_systems - 1];
 
-    for (n_deps = 0; reg->dep_names && reg->dep_names[n_deps]; ++n_deps)
+    for (n_deps = 0; reg->deps && reg->deps[n_deps]; ++n_deps)
         ;
-    for (n_comps = 0; reg->comp_names && reg->comp_names[n_comps]; ++n_comps)
+    for (n_comps = 0; reg->comps && reg->comps[n_comps]; ++n_comps)
         ;
 
     if (n_deps)
@@ -106,28 +106,28 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
 
     for (i = 0; i < n_deps; ++i) {
         for (j = 0; j < (decs->n_systems - 1); ++j) {
-            if (!strcmp(decs->systems[j].name, reg->dep_names[i])) {
+            if (!strcmp(decs->systems[j].name, reg->deps[i])) {
                 system->deps[i] = j;
                 break;
             }
         }
         if (j == (decs->n_systems - 1)) {
             fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
-                    reg->dep_names[i]);
+                    reg->deps[i]);
             return -1;
         }
     }
 
     for (i = 0; i < n_comps; ++i) {
         for (j = 0; j < decs->n_comps; ++j) {
-            if (!strcmp(decs->comps[j].name, reg->comp_names[i])) {
+            if (!strcmp(decs->comps[j].name, reg->comps[i])) {
                 system->comps[i] = j;
                 break;
             }
         }
         if (j == decs->n_comps) {
             fprintf(stderr, "Could not find id for comp name \"%s\"\n",
-                    reg->comp_names[i]);
+                    reg->comps[i]);
             return -1;
         }
     }
@@ -141,7 +141,7 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
     system->ctx             = malloc(ctx_sz);
     system->aux_ctx         = reg->aux_ctx;
-    system->comp_bits       = decs_comp_list_to_bits(decs, reg->comp_names);
+    system->comp_bits       = decs_comp_list_to_bits(decs, reg->comps);
     system->n_comps         = n_comps;
     system->n_deps          = n_deps;
     system->name            = reg->name;

@@ -28,8 +28,8 @@ struct system_reg {
     system_func func;
     system_prepare_func prepare_func;
     void *aux_ctx;
-    const char **comp_names;
-    const char **dep_names;
+    const char **comps;
+    const char **deps;
     const char *name;
 };
 
