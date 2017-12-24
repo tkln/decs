@@ -66,6 +66,9 @@ static uint64_t decs_comp_list_to_bits(struct decs *decs, const char **comps)
     uint64_t bits = 0;
     size_t i, j;
 
+    if (!comps)
+        return 0;
+
     for (i = 0; comps[i]; ++i) {
         for (j = 0; j < decs->n_comps; ++j) {
             if (!strcmp(decs->comps[j].name, comps[i]))
@@ -80,7 +83,7 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
                          uint64_t *sid)
 {
     struct system *system;
-    size_t n_deps, n_comps;
+    size_t n_deps, n_comps, n_icomps;
     size_t i, j;
     size_t ctx_sz = 0;
 
@@ -93,6 +96,8 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
         ;
     for (n_comps = 0; reg->comps && reg->comps[n_comps]; ++n_comps)
         ;
+    for (n_icomps = 0; reg->icomps && reg->icomps[n_icomps]; ++n_icomps)
+        ;
 
     if (n_deps)
         system->deps = malloc(sizeof(*system->deps) * n_deps);
@@ -103,6 +108,11 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
         system->comps = malloc(sizeof(*system->comps) * n_comps);
     else
         system->comps = NULL;
+
+    if (n_icomps)
+        system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
+    else
+        system->icomps = NULL;
 
     for (i = 0; i < n_deps; ++i) {
         for (j = 0; j < (decs->n_systems - 1); ++j) {
@@ -132,6 +142,20 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
         }
     }
 
+    for (i = 0; i < n_icomps; ++i) {
+        for (j = 0; j < decs->n_comps; ++j) {
+            if (!strcmp(decs->comps[j].name, reg->icomps[i])) {
+                system->icomps[i] = j;
+                break;
+            }
+        }
+        if (j == decs->n_comps) {
+            fprintf(stderr, "Could not find id for icomp name \"%s\"\n",
+                    reg->comps[i]);
+            return -1;
+        }
+    }
+
     ctx_sz = n_comps * sizeof(void *);
     if (reg->aux_ctx)
         ctx_sz += sizeof(void *);
@@ -142,7 +166,9 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     system->ctx             = malloc(ctx_sz);
     system->aux_ctx         = reg->aux_ctx;
     system->comp_bits       = decs_comp_list_to_bits(decs, reg->comps);
+    system->icomp_bits      = decs_comp_list_to_bits(decs, reg->icomps);
     system->n_comps         = n_comps;
+    system->n_icomps        = n_icomps;
     system->n_deps          = n_deps;
     system->name            = reg->name;
 
@@ -174,6 +200,7 @@ uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
 static void decs_system_tick(struct decs *decs, struct system *sys)
 {
     comp_bits_type comps = sys->comp_bits;
+    comp_bits_type icomps = sys->icomp_bits;
     system_func func = sys->func;
     void *data = sys->ctx;
     uint64_t eid, did, i;
@@ -190,9 +217,19 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
 
     sys->prepare_func(decs, sys->comps, sys->n_comps, sys->ctx, sys->aux_ctx);
     perf_measurement_start();
-    for (eid = 0; eid < decs->n_entities; ++eid)
-        if ((comps & decs->entity_comp_map[eid]) == comps)
-            func(decs, eid, data);
+    /* On average this saves a cycle per entity on -O2 */
+    if (__builtin_expect(icomps, 0)) {
+        for (eid = 0; eid < decs->n_entities; ++eid) {
+            if ((icomps & decs->entity_comp_map[eid]) == icomps)
+                continue;
+            if ((comps & decs->entity_comp_map[eid]) == comps)
+                func(decs, eid, data);
+        }
+    } else {
+        for (eid = 0; eid < decs->n_entities; ++eid)
+            if ((comps & decs->entity_comp_map[eid]) == comps)
+                func(decs, eid, data);
+    }
     perf_measurement_end(&sys->perf_stats);
 
     sys->done = true;
