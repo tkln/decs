@@ -25,9 +25,10 @@ uint64_t decs_register_comp(struct decs *s, const char *name, size_t size)
 
     comp = &s->comps[s->n_comps - 1];
 
-    comp->name = name;
-    comp->size  = size;
-    comp->data  = NULL;
+    comp->name      = name;
+    comp->size      = size;
+    comp->n_active  = 0;
+    comp->data      = NULL;
 
     return s->n_comps - 1;
 }
@@ -192,6 +193,8 @@ uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
     for (cid = 0; cid < decs->n_comps; ++cid) {
         comp = decs->comps + cid;
         comp->data = realloc(comp->data, comp->size * decs->n_entities);
+        if (comp_ids & (1<<cid))
+            ++comp->n_active;
     }
 
     return decs->n_entities - 1;

@@ -21,6 +21,7 @@ typedef void (*system_prepare_func)(struct decs *decs, const uint64_t *comp_ids,
 struct component {
     const char *name;
     size_t size;
+    size_t n_active;
     void *data;
 };
 
