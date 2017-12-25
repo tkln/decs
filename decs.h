@@ -17,9 +17,21 @@ enum decs_comp_nums {
     DECS_INVALID_COMP   = 0xffffffffffffffffull,
 };
 
+enum decs_system_flags {
+    /*
+     * System function gets passed a contiguous range of eids and it's expected
+     * to handle them all at once, instead of decs core calling it for each eid
+     * separately. The calls to system functions are done through
+     * system_func_batch.
+     */
+    DECS_SYS_FLAG_BATCH = 1<<0,
+};
+
 struct decs;
 typedef uint64_t comp_bits_type;
 typedef void (*system_func)(struct decs *decs, uint64_t eid, void *data);
+typedef void (*system_func_batch)(struct decs *decs, uint64_t eid, uint64_t n,
+                                  void *data);
 typedef void (*system_prepare_func)(struct decs *decs, const uint64_t *comp_ids,
                                     uint64_t n_comps, void *ctx, void *aux_ctx);
 
@@ -31,7 +43,7 @@ struct component {
 };
 
 struct system_reg {
-    system_func func;
+    void *func;
     system_prepare_func prepare_func;
     void *aux_ctx;
     uint32_t flags;
@@ -43,7 +55,7 @@ struct system_reg {
 
 struct system {
     const char *name;
-    system_func func;
+    void *func;
     system_prepare_func prepare_func;
     void *aux_ctx;
     void *ctx;

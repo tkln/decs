@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -216,8 +217,9 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
     comp_bits_type comps = sys->comp_bits;
     comp_bits_type icomps = sys->icomp_bits;
     system_func func = sys->func;
+    system_func_batch func_batch = sys->func;
     void *data = sys->ctx;
-    uint64_t eid, did, i;
+    uint64_t eid, did, i, n;
 
     if (sys->done)
         return;
@@ -233,7 +235,23 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
     perf_measurement_start();
     /* On average each branch hint saves a cycles per entity on -O2 */
     if (__builtin_expect(sys->flags, 0)) {
-        /* TODO */
+        if (sys->flags & DECS_SYS_FLAG_BATCH) {
+            assert(!icomps); /* TODO */
+            for (n = 0, i = 0; i < decs->n_entities; ++i) {
+                if ((comps & decs->entity_comp_map[i]) == comps) {
+                    if (!n) /* Start of a new range */
+                        eid = i;
+                    ++n;
+                } else {
+                    if (n) { /* End of a range */
+                        func_batch(decs, eid, n, data);
+                        n = 0;
+                    }
+                }
+            }
+            if (n)
+                func_batch(decs, eid, n, data);
+        }
     } else {
         if (__builtin_expect(icomps, 0)) {
             for (eid = 0; eid < decs->n_entities; ++eid) {
