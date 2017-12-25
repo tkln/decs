@@ -37,6 +37,7 @@ struct system_reg {
     system_func func;
     system_prepare_func prepare_func;
     void *aux_ctx;
+    uint32_t flags;
     const char **comps;
     const char **icomps;
     const char **deps;
@@ -49,6 +50,7 @@ struct system {
     system_prepare_func prepare_func;
     void *aux_ctx;
     void *ctx;
+    uint32_t flags;
     uint64_t *comps;
     size_t n_comps;
     comp_bits_type comp_bits;

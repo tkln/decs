@@ -171,10 +171,10 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
         ctx_sz += sizeof(void *);
 
     system->func            = reg->func;
-
     system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
     system->ctx             = malloc(ctx_sz);
     system->aux_ctx         = reg->aux_ctx;
+    system->flags           = reg->flags;
     system->comp_bits       = decs_comp_list_to_bits(decs, reg->comps);
     system->icomp_bits      = decs_comp_list_to_bits(decs, reg->icomps);
     system->n_comps         = n_comps;
@@ -231,18 +231,22 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
 
     sys->prepare_func(decs, sys->comps, sys->n_comps, sys->ctx, sys->aux_ctx);
     perf_measurement_start();
-    /* On average this saves a cycle per entity on -O2 */
-    if (__builtin_expect(icomps, 0)) {
-        for (eid = 0; eid < decs->n_entities; ++eid) {
-            if ((icomps & decs->entity_comp_map[eid]) == icomps)
-                continue;
-            if ((comps & decs->entity_comp_map[eid]) == comps)
-                func(decs, eid, data);
-        }
+    /* On average each branch hint saves a cycles per entity on -O2 */
+    if (__builtin_expect(sys->flags, 0)) {
+        /* TODO */
     } else {
-        for (eid = 0; eid < decs->n_entities; ++eid)
-            if ((comps & decs->entity_comp_map[eid]) == comps)
-                func(decs, eid, data);
+        if (__builtin_expect(icomps, 0)) {
+            for (eid = 0; eid < decs->n_entities; ++eid) {
+                if ((icomps & decs->entity_comp_map[eid]) == icomps)
+                    continue;
+                if ((comps & decs->entity_comp_map[eid]) == comps)
+                    func(decs, eid, data);
+            }
+        } else {
+            for (eid = 0; eid < decs->n_entities; ++eid)
+                if ((comps & decs->entity_comp_map[eid]) == comps)
+                    func(decs, eid, data);
+        }
     }
     perf_measurement_end(&sys->perf_stats);
 
