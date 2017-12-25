@@ -7,9 +7,6 @@
 
 #include "perf.h"
 
-#define SYS_IDS_ARR_END -1ull
-#define SYS_IDS_ARR(...) ((uint64_t []){ __VA_ARGS__, SYS_IDS_ARR_END })
-
 #define STR_ARR(...) ((const char * []){ __VA_ARGS__, NULL })
 
 enum decs_system_nums {
