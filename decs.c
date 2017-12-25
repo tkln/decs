@@ -80,81 +80,90 @@ static uint64_t decs_comp_list_to_bits(struct decs *decs, const char **comps)
     return bits;
 }
 
+static size_t str_arr_len(const char **arr)
+{
+    size_t i;
+
+    if (!arr)
+        return 0;
+
+    for (i = 0; arr[i]; ++i)
+        ;
+
+    return i;
+}
+
+static uint64_t decs_match_system_name(const struct decs *decs,
+                                       const char *name)
+{
+    uint64_t j;
+
+    for (j = 0; j < decs->n_systems; ++j)
+        if (!strcmp(decs->systems[j].name, name))
+            return j;
+
+    return DECS_INVALID_SYSTEM;
+}
+
+static uint64_t decs_match_comp_name(const struct decs *decs,
+                                     const char *name)
+{
+    uint64_t j;
+
+    for (j = 0; j < decs->n_comps; ++j)
+        if (!strcmp(decs->comps[j].name, name))
+            return j;
+
+    return DECS_INVALID_COMP;
+}
+
 int decs_register_system(struct decs *decs, const struct system_reg *reg,
                          uint64_t *sid)
 {
     struct system *system;
-    size_t n_deps, n_comps, n_icomps;
-    size_t i, j;
+    size_t n_deps = str_arr_len(reg->deps);
+    size_t n_comps = str_arr_len(reg->comps);
+    size_t n_icomps = str_arr_len(reg->icomps);
     size_t ctx_sz = 0;
+    uint64_t dep, comp;
+    size_t i;
 
-    ++decs->n_systems;
-    decs->systems = realloc(decs->systems, decs->n_systems *
+    decs->systems = realloc(decs->systems, (decs->n_systems + 1) *
                                            sizeof(struct system));
-    system = &decs->systems[decs->n_systems - 1];
+    system = &decs->systems[decs->n_systems];
 
-    for (n_deps = 0; reg->deps && reg->deps[n_deps]; ++n_deps)
-        ;
-    for (n_comps = 0; reg->comps && reg->comps[n_comps]; ++n_comps)
-        ;
-    for (n_icomps = 0; reg->icomps && reg->icomps[n_icomps]; ++n_icomps)
-        ;
-
-    if (n_deps)
-        system->deps = malloc(sizeof(*system->deps) * n_deps);
-    else
-        system->deps = NULL;
-
-    if (n_comps)
-        system->comps = malloc(sizeof(*system->comps) * n_comps);
-    else
-        system->comps = NULL;
-
-    if (n_icomps)
-        system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
-    else
-        system->icomps = NULL;
+    system->deps = malloc(sizeof(*system->deps) * n_deps);
+    system->comps = malloc(sizeof(*system->comps) * n_comps);
+    system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
 
     for (i = 0; i < n_deps; ++i) {
-        for (j = 0; j < (decs->n_systems - 1); ++j) {
-            if (!strcmp(decs->systems[j].name, reg->deps[i])) {
-                system->deps[i] = j;
-                break;
-            }
-        }
-        if (j == (decs->n_systems - 1)) {
+        dep = decs_match_system_name(decs, reg->deps[i]);
+        if (dep == DECS_INVALID_SYSTEM) {
             fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
                     reg->deps[i]);
             return -1;
         }
+        system->deps[i] = dep;
     }
 
     for (i = 0; i < n_comps; ++i) {
-        for (j = 0; j < decs->n_comps; ++j) {
-            if (!strcmp(decs->comps[j].name, reg->comps[i])) {
-                system->comps[i] = j;
-                break;
-            }
-        }
-        if (j == decs->n_comps) {
+        comp = decs_match_comp_name(decs, reg->comps[i]);
+        if (comp == DECS_INVALID_COMP) {
             fprintf(stderr, "Could not find id for comp name \"%s\"\n",
                     reg->comps[i]);
             return -1;
         }
+        system->comps[i] = comp;
     }
 
     for (i = 0; i < n_icomps; ++i) {
-        for (j = 0; j < decs->n_comps; ++j) {
-            if (!strcmp(decs->comps[j].name, reg->icomps[i])) {
-                system->icomps[i] = j;
-                break;
-            }
-        }
-        if (j == decs->n_comps) {
+        comp = decs_match_comp_name(decs, reg->icomps[i]);
+        if (comp == DECS_INVALID_COMP) {
             fprintf(stderr, "Could not find id for icomp name \"%s\"\n",
                     reg->comps[i]);
             return -1;
         }
+        system->icomps[i] = comp;
     }
 
     ctx_sz = n_comps * sizeof(void *);
@@ -174,7 +183,9 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     system->name            = reg->name;
 
     if (sid)
-        *sid = decs->n_systems - 1;
+        *sid = decs->n_systems;
+
+    ++decs->n_systems;
 
     return 0;
 }

@@ -12,6 +12,14 @@
 
 #define STR_ARR(...) ((const char * []){ __VA_ARGS__, NULL })
 
+enum decs_system_nums {
+    DECS_INVALID_SYSTEM = 0xffffffffffffffffull,
+};
+
+enum decs_comp_nums {
+    DECS_INVALID_COMP   = 0xffffffffffffffffull,
+};
+
 struct decs;
 typedef uint64_t comp_bits_type;
 typedef void (*system_func)(struct decs *decs, uint64_t eid, void *data);
