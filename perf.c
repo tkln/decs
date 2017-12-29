@@ -22,7 +22,7 @@ static const struct event {
     int *fd;
 } events[] = {
     {
-        .config = PERF_COUNT_HW_INSTRUCTIONS,
+        .config = PERF_COUNT_HW_REF_CPU_CYCLES,
         .fd = &cpu_cycles_fd,
     }, {
         .config = PERF_COUNT_HW_CACHE_REFERENCES,
