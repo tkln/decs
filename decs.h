@@ -45,7 +45,6 @@ struct component {
 struct system_reg {
     void *func;
     system_prepare_func prepare_func;
-    void *aux_ctx;
     uint32_t flags;
     const char **comps;     /* Names of components processed by the system */
     const char **icomps;    /* Mask for non-accepting components */
@@ -100,7 +99,7 @@ void decs_system_prepare(struct decs *decs, const uint64_t *comp_ids,
                          size_t n_comps, void *ctx, void *aux_ctx);
 
 int decs_register_system(struct decs *decs, const struct system_reg *reg,
-                         uint64_t *sid);
+                         void *aux_ctx, uint64_t *sid);
 
 uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids);
 

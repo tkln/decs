@@ -119,7 +119,7 @@ static uint64_t decs_match_comp_name(const struct decs *decs,
 }
 
 int decs_register_system(struct decs *decs, const struct system_reg *reg,
-                         uint64_t *sid)
+                         void *aux_ctx, uint64_t *sid)
 {
     struct system *system;
     size_t n_deps = str_arr_len(reg->deps);
@@ -168,13 +168,13 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     }
 
     ctx_sz = n_comps * sizeof(void *);
-    if (reg->aux_ctx)
+    if (aux_ctx)
         ctx_sz += sizeof(void *);
 
     system->func            = reg->func;
     system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
     system->ctx             = malloc(ctx_sz);
-    system->aux_ctx         = reg->aux_ctx;
+    system->aux_ctx         = aux_ctx;
     system->flags           = reg->flags;
     system->comp_bits       = decs_comp_list_to_bits(decs, reg->comps);
     system->icomp_bits      = decs_comp_list_to_bits(decs, reg->icomps);
