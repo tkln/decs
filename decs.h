@@ -47,10 +47,10 @@ struct system_reg {
     system_prepare_func prepare_func;
     void *aux_ctx;
     uint32_t flags;
-    const char **comps;
-    const char **icomps;
-    const char **deps;
-    const char *name;
+    const char **comps;     /* Names of components processed by the system */
+    const char **icomps;    /* Mask for non-accepting components */
+    const char **deps;      /* Names of systems that need to be run first */
+    const char *name;       /* Name of the system */
 };
 
 struct system {
