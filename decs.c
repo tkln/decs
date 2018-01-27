@@ -242,22 +242,24 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
 int decs_systems_comp_dep_prepare(struct decs *decs)
 {
     const struct system_reg *reg;
+    struct system *post_dep;
     struct system *sys;
     uint64_t dep, comp;
     uint64_t i, j;
+    uint64_t n_post_deps;
 
     for (i = 0; i < decs->n_systems; ++i) {
         sys = decs->systems + i;
         reg = sys->reg;
 
-        sys->n_deps = str_arr_len(reg->deps);
+        sys->n_deps = str_arr_len(reg->pre_deps);
         sys->deps = malloc(sizeof(*sys->deps) * sys->n_deps);
 
         for (j = 0; j < sys->n_deps; ++j) {
-            dep = decs_match_system_name(decs, reg->deps[j]);
+            dep = decs_match_system_name(decs, reg->pre_deps[j]);
             if (dep == DECS_INVALID_SYSTEM) {
                 fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
-                        reg->deps[j]);
+                        reg->pre_deps[j]);
                 return -1;
             }
             sys->deps[j] = dep;
@@ -283,6 +285,27 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
             sys->icomps[j] = comp;
         }
     }
+
+    for (i = 0; i < decs->n_systems; ++i) {
+        sys = decs->systems + i;
+        reg = sys->reg;
+        n_post_deps = str_arr_len(reg->post_deps);
+
+        for (j = 0; j < n_post_deps; ++j) {
+            /*
+             * Post-deps are handled by adding the system with a given post-dep
+             * to the pre-deps of the post-dep.
+             */
+            dep = decs_match_system_name(decs, reg->post_deps[j]);
+            post_dep = decs->systems + dep;
+
+            ++post_dep->n_deps;
+            post_dep->deps = realloc(post_dep->deps, sizeof(*post_dep->deps) *
+                                                     post_dep->n_deps);
+            post_dep->deps[post_dep->n_deps - 1] = i;
+        }
+    }
+
     decs->prepared = true;
 
     return 0;

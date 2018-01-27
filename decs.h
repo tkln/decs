@@ -48,7 +48,8 @@ struct system_reg {
     uint32_t flags;
     const char **comps;     /* Names of components processed by the system */
     const char **icomps;    /* Mask for non-accepting components */
-    const char **deps;      /* Names of systems that need to be run first */
+    const char **pre_deps;  /* Names of systems that need to be run first */
+    const char **post_deps; /* Names of systems that can only be run after */
     const char *name;       /* Name of the system */
 };
 
