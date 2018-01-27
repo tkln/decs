@@ -317,7 +317,10 @@ static void decs_system_tick_dryrun(struct decs *decs, struct system *sys)
             decs_system_tick_dryrun(decs, decs->systems + did);
     }
 
-    printf("%s\n", sys->name);
+    printf("%s  (deps:", sys->name);
+    for (i = 0; i < sys->n_deps; ++i)
+        printf(" %s,", decs->systems[sys->deps[i]].name);
+    printf(")\n");
 
     sys->done = true;
 }
