@@ -126,46 +126,16 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     size_t n_comps = str_arr_len(reg->comps);
     size_t n_icomps = str_arr_len(reg->icomps);
     size_t ctx_sz = 0;
-    uint64_t dep, comp;
-    size_t i;
 
-    decs->systems = realloc(decs->systems, (decs->n_systems + 1) *
+    ++decs->n_systems;
+
+    decs->systems = realloc(decs->systems, decs->n_systems *
                                            sizeof(struct system));
-    system = &decs->systems[decs->n_systems];
+    system = &decs->systems[decs->n_systems - 1];
 
     system->deps = malloc(sizeof(*system->deps) * n_deps);
     system->comps = malloc(sizeof(*system->comps) * n_comps);
     system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
-
-    for (i = 0; i < n_deps; ++i) {
-        dep = decs_match_system_name(decs, reg->deps[i]);
-        if (dep == DECS_INVALID_SYSTEM) {
-            fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
-                    reg->deps[i]);
-            return -1;
-        }
-        system->deps[i] = dep;
-    }
-
-    for (i = 0; i < n_comps; ++i) {
-        comp = decs_match_comp_name(decs, reg->comps[i]);
-        if (comp == DECS_INVALID_COMP) {
-            fprintf(stderr, "Could not find id for comp name \"%s\"\n",
-                    reg->comps[i]);
-            return -1;
-        }
-        system->comps[i] = comp;
-    }
-
-    for (i = 0; i < n_icomps; ++i) {
-        comp = decs_match_comp_name(decs, reg->icomps[i]);
-        if (comp == DECS_INVALID_COMP) {
-            fprintf(stderr, "Could not find id for icomp name \"%s\"\n",
-                    reg->comps[i]);
-            return -1;
-        }
-        system->icomps[i] = comp;
-    }
 
     ctx_sz = n_comps * sizeof(void *);
     if (aux_ctx)
@@ -182,11 +152,12 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     system->n_icomps        = n_icomps;
     system->n_deps          = n_deps;
     system->name            = reg->name;
+    system->reg             = reg;
 
     if (sid)
         *sid = decs->n_systems;
 
-    ++decs->n_systems;
+    decs->prepared = false;
 
     return 0;
 }
@@ -271,9 +242,57 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
     sys->done = true;
 }
 
+int decs_systems_comp_dep_prepare(struct decs *decs)
+{
+    const struct system_reg *reg;
+    struct system *sys;
+    uint64_t dep, comp;
+    uint64_t i, j;
+
+    for (i = 0; i < decs->n_systems; ++i) {
+        sys = decs->systems + i;
+        reg = sys->reg;
+        for (j = 0; j < sys->n_deps; ++j) {
+            dep = decs_match_system_name(decs, reg->deps[j]);
+            if (dep == DECS_INVALID_SYSTEM) {
+                fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
+                        reg->deps[j]);
+                return -1;
+            }
+            sys->deps[j] = dep;
+        }
+
+        for (j = 0; j < sys->n_comps; ++j) {
+            comp = decs_match_comp_name(decs, reg->comps[j]);
+            if (comp == DECS_INVALID_COMP) {
+                fprintf(stderr, "Could not find id for comp name \"%s\"\n",
+                        reg->comps[j]);
+                return -1;
+            }
+            sys->comps[j] = comp;
+        }
+
+        for (j = 0; j < sys->n_icomps; ++j) {
+            comp = decs_match_comp_name(decs, reg->icomps[j]);
+            if (comp == DECS_INVALID_COMP) {
+                fprintf(stderr, "Could not find id for icomp name \"%s\"\n",
+                        reg->comps[j]);
+                return -1;
+            }
+            sys->icomps[j] = comp;
+        }
+    }
+    decs->prepared = true;
+
+    return 0;
+}
+
 void decs_tick(struct decs *decs)
 {
     uint64_t sid;
+
+    if (!decs->prepared)
+        decs_systems_comp_dep_prepare(decs);
 
     for (sid = 0; sid < decs->n_systems; ++sid)
         decs->systems[sid].done = false;
@@ -305,6 +324,9 @@ static void decs_system_tick_dryrun(struct decs *decs, struct system *sys)
 void decs_tick_dryrun(struct decs *decs)
 {
     uint64_t sid;
+
+    if (!decs->prepared)
+        decs_systems_comp_dep_prepare(decs);
 
     printf("System execution order:\n");
     for (sid = 0; sid < decs->n_systems; ++sid)

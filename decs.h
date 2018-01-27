@@ -69,6 +69,7 @@ struct system {
     size_t n_deps;
     bool done;
     struct perf_stats perf_stats;
+    const struct system_reg *reg;
 };
 
 struct decs {
@@ -78,6 +79,7 @@ struct decs {
     size_t n_entities;
     struct system *systems;
     size_t n_systems;
+    bool prepared;
 };
 
 struct decs_ctx {
