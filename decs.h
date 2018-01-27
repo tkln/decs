@@ -111,5 +111,7 @@ static inline void *decs_get_comp(struct decs *s, uint64_t cid, uint64_t eid)
 
 void decs_tick(struct decs *decs);
 
+void decs_tick_dryrun(struct decs *decs);
+
 void decs_cleanup(struct decs *decs);
 #endif

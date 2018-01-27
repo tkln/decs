@@ -282,6 +282,38 @@ void decs_tick(struct decs *decs)
         decs_system_tick(decs, decs->systems + sid);
 }
 
+
+static void decs_system_tick_dryrun(struct decs *decs, struct system *sys)
+{
+    uint64_t did, i;
+
+    if (sys->done)
+        return;
+
+    /* Run all the dependencies before the system itself */
+    for (i = 0; i < sys->n_deps; ++i) {
+        did = sys->deps[i];
+        if (!decs->systems[did].done)
+            decs_system_tick_dryrun(decs, decs->systems + did);
+    }
+
+    printf("%s\n", sys->name);
+
+    sys->done = true;
+}
+
+void decs_tick_dryrun(struct decs *decs)
+{
+    uint64_t sid;
+
+    printf("System execution order:\n");
+    for (sid = 0; sid < decs->n_systems; ++sid)
+        decs->systems[sid].done = false;
+
+    for (sid = 0; sid < decs->n_systems; ++sid)
+        decs_system_tick_dryrun(decs, decs->systems + sid);
+}
+
 void decs_cleanup(struct decs *decs)
 {
     int cid;
