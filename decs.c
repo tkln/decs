@@ -122,7 +122,6 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
                          void *aux_ctx, uint64_t *sid)
 {
     struct system *system;
-    size_t n_deps = str_arr_len(reg->deps);
     size_t n_comps = str_arr_len(reg->comps);
     size_t n_icomps = str_arr_len(reg->icomps);
     size_t ctx_sz = 0;
@@ -133,13 +132,12 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
                                            sizeof(struct system));
     system = &decs->systems[decs->n_systems - 1];
 
-    system->deps = malloc(sizeof(*system->deps) * n_deps);
-    system->comps = malloc(sizeof(*system->comps) * n_comps);
-    system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
-
     ctx_sz = n_comps * sizeof(void *);
     if (aux_ctx)
         ctx_sz += sizeof(void *);
+
+    system->comps = malloc(sizeof(*system->comps) * n_comps);
+    system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
 
     system->func            = reg->func;
     system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
@@ -150,7 +148,6 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     system->icomp_bits      = decs_comp_list_to_bits(decs, reg->icomps);
     system->n_comps         = n_comps;
     system->n_icomps        = n_icomps;
-    system->n_deps          = n_deps;
     system->name            = reg->name;
     system->reg             = reg;
 
@@ -252,6 +249,10 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
     for (i = 0; i < decs->n_systems; ++i) {
         sys = decs->systems + i;
         reg = sys->reg;
+
+        sys->n_deps = str_arr_len(reg->deps);
+        sys->deps = malloc(sizeof(*sys->deps) * sys->n_deps);
+
         for (j = 0; j < sys->n_deps; ++j) {
             dep = decs_match_system_name(decs, reg->deps[j]);
             if (dep == DECS_INVALID_SYSTEM) {
