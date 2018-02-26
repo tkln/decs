@@ -94,8 +94,7 @@ static size_t str_arr_len(const char **arr)
     return i;
 }
 
-static uint64_t decs_match_system_name(const struct decs *decs,
-                                       const char *name)
+static uint64_t decs_lookup_system_id(const struct decs *decs, const char *name)
 {
     uint64_t j;
 
@@ -106,8 +105,7 @@ static uint64_t decs_match_system_name(const struct decs *decs,
     return DECS_INVALID_SYSTEM;
 }
 
-static uint64_t decs_match_comp_name(const struct decs *decs,
-                                     const char *name)
+static uint64_t decs_lookup_comp_id(const struct decs *decs, const char *name)
 {
     uint64_t j;
 
@@ -256,7 +254,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
         sys->deps = malloc(sizeof(*sys->deps) * sys->n_deps);
 
         for (j = 0; j < sys->n_deps; ++j) {
-            dep = decs_match_system_name(decs, reg->pre_deps[j]);
+            dep = decs_lookup_system_id(decs, reg->pre_deps[j]);
             if (dep == DECS_INVALID_SYSTEM) {
                 fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
                         reg->pre_deps[j]);
@@ -266,7 +264,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
         }
 
         for (j = 0; j < sys->n_comps; ++j) {
-            comp = decs_match_comp_name(decs, reg->comps[j]);
+            comp = decs_lookup_comp_id(decs, reg->comps[j]);
             if (comp == DECS_INVALID_COMP) {
                 fprintf(stderr, "Could not find id for comp name \"%s\"\n",
                         reg->comps[j]);
@@ -276,7 +274,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
         }
 
         for (j = 0; j < sys->n_icomps; ++j) {
-            comp = decs_match_comp_name(decs, reg->icomps[j]);
+            comp = decs_lookup_comp_id(decs, reg->icomps[j]);
             if (comp == DECS_INVALID_COMP) {
                 fprintf(stderr, "Could not find id for icomp name \"%s\"\n",
                         reg->comps[j]);
@@ -296,7 +294,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
              * Post-deps are handled by adding the system with a given post-dep
              * to the pre-deps of the post-dep.
              */
-            dep = decs_match_system_name(decs, reg->post_deps[j]);
+            dep = decs_lookup_system_id(decs, reg->post_deps[j]);
             post_dep = decs->systems + dep;
 
             ++post_dep->n_deps;
