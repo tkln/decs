@@ -67,7 +67,6 @@ struct system {
     size_t n_icomps;
     comp_bits_type icomp_bits;
     uint64_t *deps;
-    size_t n_deps;
     bool done;
     struct perf_stats perf_stats;
     const struct system_reg *reg;

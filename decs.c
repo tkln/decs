@@ -183,7 +183,7 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
         return;
 
     /* Run all the dependencies before the system itself */
-    for (i = 0; i < sys->n_deps; ++i) {
+    for (i = 0; i < sb_size(sys->deps); ++i) {
         did = sys->deps[i];
         if (!decs->systems[did].done)
             decs_system_tick(decs, decs->systems + did);
@@ -242,10 +242,10 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
         sys = decs->systems + i;
         reg = sys->reg;
 
-        sys->n_deps = str_arr_len(reg->pre_deps);
-        sys->deps = malloc(sizeof(*sys->deps) * sys->n_deps);
+        //sys->n_deps = str_arr_len(reg->pre_deps);
+        sb_alloc(sys->deps, str_arr_len(reg->pre_deps));
 
-        for (j = 0; j < sys->n_deps; ++j) {
+        for (j = 0; j < sb_cap(sys->deps); ++j) {
             dep = decs_lookup_system_id(decs, reg->pre_deps[j]);
             if (dep == DECS_INVALID_SYSTEM) {
                 fprintf(stderr, "Could not find id for dep system name \"%s\"\n",
@@ -289,10 +289,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
             dep = decs_lookup_system_id(decs, reg->post_deps[j]);
             post_dep = decs->systems + dep;
 
-            ++post_dep->n_deps;
-            post_dep->deps = realloc(post_dep->deps, sizeof(*post_dep->deps) *
-                                                     post_dep->n_deps);
-            post_dep->deps[post_dep->n_deps - 1] = i;
+            sb_push(post_dep->deps, i);
         }
     }
 
@@ -324,14 +321,14 @@ static void decs_system_tick_dryrun(struct decs *decs, struct system *sys)
         return;
 
     /* Run all the dependencies before the system itself */
-    for (i = 0; i < sys->n_deps; ++i) {
+    for (i = 0; i < sb_size(sys->deps); ++i) {
         did = sys->deps[i];
         if (!decs->systems[did].done)
             decs_system_tick_dryrun(decs, decs->systems + did);
     }
 
     printf("%s  (deps:", sys->name);
-    for (i = 0; i < sys->n_deps; ++i)
+    for (i = 0; i < sb_size(sys->deps); ++i)
         printf(" %s,", decs->systems[sys->deps[i]].name);
     printf(")\n");
 
@@ -362,7 +359,7 @@ void decs_cleanup(struct decs *decs)
         free(decs->comps[cid].data);
 
     for (sid = 0; sid < sb_size(decs->systems); ++sid) {
-        free(decs->systems[sid].deps);
+        sb_free(decs->systems[sid].deps);
         free(decs->systems[sid].ctx);
     }
 
