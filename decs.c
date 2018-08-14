@@ -156,21 +156,18 @@ uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
 {
     int cid;
     struct component *comp;
-    size_t comp_maps_sz;
 
-    ++decs->n_entities;
-    comp_maps_sz = decs->n_entities * sizeof(*decs->entity_comp_map);
-    decs->entity_comp_map = realloc(decs->entity_comp_map, comp_maps_sz);
-    decs->entity_comp_map[decs->n_entities - 1] = comp_ids;
+    sb_push(decs->entity_comp_map, comp_ids);
 
     for (cid = 0; cid < sb_size(decs->comps); ++cid) {
         comp = decs->comps + cid;
-        comp->data = realloc(comp->data, comp->size * decs->n_entities);
+        comp->data = realloc(comp->data,
+                             comp->size * sb_size(decs->entity_comp_map));
         if (comp_ids & (1<<cid))
             ++comp->n_active;
     }
 
-    return decs->n_entities - 1;
+    return sb_size(decs->entity_comp_map) - 1;
 }
 
 static void decs_system_tick(struct decs *decs, struct system *sys)
@@ -198,7 +195,7 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
     if (__builtin_expect(sys->flags, 0)) {
         if (sys->flags & DECS_SYS_FLAG_BATCH) {
             assert(!icomps); /* TODO */
-            for (n = 0, i = 0; i < decs->n_entities; ++i) {
+            for (n = 0, i = 0; i < sb_size(decs->entity_comp_map); ++i) {
                 if ((comps & decs->entity_comp_map[i]) == comps) {
                     if (!n) /* Start of a new range */
                         eid = i;
@@ -215,14 +212,14 @@ static void decs_system_tick(struct decs *decs, struct system *sys)
         }
     } else {
         if (__builtin_expect(icomps, 0)) {
-            for (eid = 0; eid < decs->n_entities; ++eid) {
+            for (eid = 0; eid < sb_size(decs->entity_comp_map); ++eid) {
                 if ((icomps & decs->entity_comp_map[eid]) == icomps)
                     continue;
                 if ((comps & decs->entity_comp_map[eid]) == comps)
                     func(decs, eid, data);
             }
         } else {
-            for (eid = 0; eid < decs->n_entities; ++eid)
+            for (eid = 0; eid < sb_size(decs->entity_comp_map); ++eid)
                 if ((comps & decs->entity_comp_map[eid]) == comps)
                     func(decs, eid, data);
         }
@@ -371,5 +368,5 @@ void decs_cleanup(struct decs *decs)
 
     sb_free(decs->systems);
     sb_free(decs->comps);
-    free(decs->entity_comp_map);
+    sb_free(decs->entity_comp_map);
 }

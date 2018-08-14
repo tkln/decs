@@ -76,7 +76,6 @@ struct system {
 struct decs {
     struct component *comps;
     comp_bits_type *entity_comp_map;
-    size_t n_entities;
     struct system *systems;
     bool prepared;
 };
