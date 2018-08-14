@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "decs.h"
+#include "sb.h"
 
 void decs_init(struct decs *decs)
 {
@@ -21,24 +22,21 @@ uint64_t decs_register_comp(struct decs *s, const char *name, size_t size)
 {
     struct component *comp;
 
-    ++s->n_comps;
-    s->comps = realloc(s->comps, s->n_comps * sizeof(s->comps[0]));
-
-    comp = &s->comps[s->n_comps - 1];
+    comp = sb_alloc_last(s->comps);
 
     comp->name      = name;
     comp->size      = size;
     comp->n_active  = 0;
     comp->data      = NULL;
 
-    return s->n_comps - 1;
+    return sb_size(s->comps) - 1;
 }
 
 void *decs_get_comp_base(struct decs *decs, const char *name)
 {
     size_t i;
 
-    for (i = 0; i < decs->n_comps; ++i)
+    for (i = 0; i < sb_size(decs->comps); ++i)
         if (!strcmp(name, decs->comps[i].name))
             return decs->comps[i].data;
 
@@ -72,7 +70,7 @@ static uint64_t decs_comp_list_to_bits(struct decs *decs, const char **comps)
         return 0;
 
     for (i = 0; comps[i]; ++i) {
-        for (j = 0; j < decs->n_comps; ++j) {
+        for (j = 0; j < sb_size(decs->comps); ++j) {
             if (!strcmp(decs->comps[j].name, comps[i]))
                 bits |= 1<<j;
         }
@@ -109,7 +107,7 @@ static uint64_t decs_lookup_comp_id(const struct decs *decs, const char *name)
 {
     uint64_t j;
 
-    for (j = 0; j < decs->n_comps; ++j)
+    for (j = 0; j < sb_size(decs->comps); ++j)
         if (!strcmp(decs->comps[j].name, name))
             return j;
 
@@ -168,7 +166,7 @@ uint64_t decs_alloc_entity(struct decs *decs, comp_bits_type comp_ids)
     decs->entity_comp_map = realloc(decs->entity_comp_map, comp_maps_sz);
     decs->entity_comp_map[decs->n_entities - 1] = comp_ids;
 
-    for (cid = 0; cid < decs->n_comps; ++cid) {
+    for (cid = 0; cid < sb_size(decs->comps); ++cid) {
         comp = decs->comps + cid;
         comp->data = realloc(comp->data, comp->size * decs->n_entities);
         if (comp_ids & (1<<cid))
@@ -366,7 +364,7 @@ void decs_cleanup(struct decs *decs)
     int cid;
     uint64_t sid;
 
-    for (cid = 0; cid < decs->n_comps; ++cid)
+    for (cid = 0; cid < sb_size(decs->comps); ++cid)
         free(decs->comps[cid].data);
 
     for (sid = 0; sid < decs->n_systems; ++sid) {
@@ -376,5 +374,5 @@ void decs_cleanup(struct decs *decs)
 
     free(decs->systems);
     free(decs->entity_comp_map);
-    free(decs->comps);
+    sb_free(decs->comps);
 }
