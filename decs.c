@@ -96,7 +96,7 @@ static uint64_t decs_lookup_system_id(const struct decs *decs, const char *name)
 {
     uint64_t j;
 
-    for (j = 0; j < decs->n_systems; ++j)
+    for (j = 0; j < sb_size(decs->systems); ++j)
         if (!strcmp(decs->systems[j].name, name))
             return j;
 
@@ -122,33 +122,30 @@ int decs_register_system(struct decs *decs, const struct system_reg *reg,
     size_t n_icomps = str_arr_len(reg->icomps);
     size_t ctx_sz = 0;
 
-    ++decs->n_systems;
-
-    decs->systems = realloc(decs->systems, decs->n_systems *
-                                           sizeof(struct system));
-    system = &decs->systems[decs->n_systems - 1];
+    system = sb_alloc_last(decs->systems);
 
     ctx_sz = n_comps * sizeof(void *);
     if (aux_ctx)
         ctx_sz += sizeof(void *);
 
-    system->comps = malloc(sizeof(*system->comps) * n_comps);
-    system->icomps = malloc(sizeof(*system->icomps) * n_icomps);
-
-    system->func            = reg->func;
-    system->prepare_func    = reg->prepare_func ?: decs_system_prepare;
-    system->ctx             = malloc(ctx_sz);
-    system->aux_ctx         = aux_ctx;
-    system->flags           = reg->flags;
-    system->comp_bits       = decs_comp_list_to_bits(decs, reg->comps);
-    system->icomp_bits      = decs_comp_list_to_bits(decs, reg->icomps);
-    system->n_comps         = n_comps;
-    system->n_icomps        = n_icomps;
-    system->name            = reg->name;
-    system->reg             = reg;
+    *system = (struct system) {
+        .comps          = malloc(sizeof(*system->comps) * n_comps),
+        .icomps         = malloc(sizeof(*system->icomps) * n_icomps),
+        .func           = reg->func,
+        .prepare_func   = reg->prepare_func ?: decs_system_prepare,
+        .ctx            = malloc(ctx_sz),
+        .aux_ctx        = aux_ctx,
+        .flags          = reg->flags,
+        .comp_bits      = decs_comp_list_to_bits(decs, reg->comps),
+        .icomp_bits     = decs_comp_list_to_bits(decs, reg->icomps),
+        .n_comps        = n_comps,
+        .n_icomps       = n_icomps,
+        .name           = reg->name,
+        .reg            = reg,
+    };
 
     if (sid)
-        *sid = decs->n_systems;
+        *sid = sb_size(decs->systems) - 1;
 
     decs->prepared = false;
 
@@ -244,7 +241,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
     uint64_t i, j;
     uint64_t n_post_deps;
 
-    for (i = 0; i < decs->n_systems; ++i) {
+    for (i = 0; i < sb_size(decs->systems); ++i) {
         sys = decs->systems + i;
         reg = sys->reg;
 
@@ -282,7 +279,7 @@ int decs_systems_comp_dep_prepare(struct decs *decs)
         }
     }
 
-    for (i = 0; i < decs->n_systems; ++i) {
+    for (i = 0; i < sb_size(decs->systems); ++i) {
         sys = decs->systems + i;
         reg = sys->reg;
         n_post_deps = str_arr_len(reg->post_deps);
@@ -314,10 +311,10 @@ void decs_tick(struct decs *decs)
     if (!decs->prepared)
         decs_systems_comp_dep_prepare(decs);
 
-    for (sid = 0; sid < decs->n_systems; ++sid)
+    for (sid = 0; sid < sb_size(decs->systems); ++sid)
         decs->systems[sid].done = false;
 
-    for (sid = 0; sid < decs->n_systems; ++sid)
+    for (sid = 0; sid < sb_size(decs->systems); ++sid)
         decs_system_tick(decs, decs->systems + sid);
 }
 
@@ -352,10 +349,10 @@ void decs_tick_dryrun(struct decs *decs)
         decs_systems_comp_dep_prepare(decs);
 
     printf("System execution order:\n");
-    for (sid = 0; sid < decs->n_systems; ++sid)
+    for (sid = 0; sid < sb_size(decs->systems); ++sid)
         decs->systems[sid].done = false;
 
-    for (sid = 0; sid < decs->n_systems; ++sid)
+    for (sid = 0; sid < sb_size(decs->systems); ++sid)
         decs_system_tick_dryrun(decs, decs->systems + sid);
 }
 
@@ -367,12 +364,12 @@ void decs_cleanup(struct decs *decs)
     for (cid = 0; cid < sb_size(decs->comps); ++cid)
         free(decs->comps[cid].data);
 
-    for (sid = 0; sid < decs->n_systems; ++sid) {
+    for (sid = 0; sid < sb_size(decs->systems); ++sid) {
         free(decs->systems[sid].deps);
         free(decs->systems[sid].ctx);
     }
 
-    free(decs->systems);
-    free(decs->entity_comp_map);
+    sb_free(decs->systems);
     sb_free(decs->comps);
+    free(decs->entity_comp_map);
 }
